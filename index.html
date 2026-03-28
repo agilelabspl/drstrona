@@ -1038,9 +1038,10 @@ function buildPrivacy(d){
     chk(!!d.hasTerms, 'Link do regulaminu'),
     chk(!!d.hasCookieBanner, 'Baner cookie / zgoda na śledzenie'),
     chk(d.isHttps, 'Bezpieczne połączenie (HTTPS)'),
-    chk(!d.hasGA||d.hasCookieBanner, 'Google Analytics za zgodą użytkownika', d.hasGA?'GA wykryte':'GA nie wykryte'),
-    chk(!d.hasFB||d.hasCookieBanner, 'Facebook Pixel za zgodą użytkownika', d.hasFB?'Pixel wykryty':'Pixel nie wykryty'),
-    chk(!d.hasHotjar||d.hasCookieBanner, 'Hotjar za zgodą użytkownika', d.hasHotjar?'Hotjar wykryty':'Hotjar nie wykryty'),
+    ...(d.hasGA?[chk(d.hasCookieBanner, 'Google Analytics za zgodą użytkownika', 'GA wykryte na stronie')]:[]),
+    ...(d.hasFB?[chk(d.hasCookieBanner, 'Facebook Pixel za zgodą użytkownika', 'Pixel wykryty na stronie')]:[]),
+    ...(d.hasHotjar?[chk(d.hasCookieBanner, 'Hotjar za zgodą użytkownika', 'Hotjar wykryty na stronie')]:[]),
+    ...(!d.hasGA&&!d.hasFB&&!d.hasHotjar?[chk(true, 'Brak trackerów zewnętrznych')]:[]),
     chk(!d.hasForms||d.formHasConsent, 'Formularze z checkboxem zgody', d.hasForms?d.formCount+' formularzy':'brak formularzy'),
   ]);
   return sec('RODO i prywatność','analiza HTML · nie ocena prawna',worst,f,cl);
