@@ -537,26 +537,19 @@ function isErrorPage(html){
 
 async function fetchViaProxy(targetUrl){
   const proxies = [
-    { url: u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, type:'json' },
-    { url: u => `https://corsproxy.io/?${encodeURIComponent(u)}`, type:'text' },
+    { url: u => `https://drstrona-proxy.agilelabs-pl.workers.dev/?url=${encodeURIComponent(u)}`, type:'text' },
     { url: u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, type:'text' },
   ];
 
   for(const proxy of proxies){
     try{
       const ctrl = new AbortController();
-      const timer = setTimeout(()=>ctrl.abort(), 10000);
+      const timer = setTimeout(()=>ctrl.abort(), 12000);
       const res = await fetch(proxy.url(targetUrl), {signal:ctrl.signal});
       clearTimeout(timer);
       if(!res.ok) continue;
-      if(proxy.type==='json'){
-        const j = await res.json();
-        if(j?.status_code && j.status_code>=400) continue;
-        if(j?.contents?.length > 50 && !isErrorPage(j.contents)) return j.contents;
-      } else {
-        const t = await res.text();
-        if(t?.length > 50 && !isErrorPage(t)) return t;
-      }
+      const t = await res.text();
+      if(t?.length > 50 && !isErrorPage(t)) return t;
     }catch(e){ continue; }
   }
   return null;
