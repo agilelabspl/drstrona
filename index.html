@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dr.Strona — zbadaj zdrowie swojej strony</title>
-<meta name="description" content="Zbadaj 6 obszarów swojej strony w 59 sekund. SEO, szybkość, AI Ready (GEO), indeksowanie, struktura, RODO. Dowiedz się co poprawić.">
+<meta name="description" content="Zbadaj 7 obszarów swojej strony w 59 sekund. SEO, szybkość, AI Ready (GEO), indeksowanie, struktura, RODO. Dowiedz się co poprawić.">
 <link rel="icon" href="favicon.svg">
 <link rel="canonical" href="https://www.drstrona.pl/">
 <meta property="og:title" content="Dr.Strona — zbadaj zdrowie swojej strony">
-<meta property="og:description" content="Zbadaj 6 obszarów swojej strony w 59 sekund. Dowiedz się co blokuje Twój ruch, widoczność i konwersje.">
+<meta property="og:description" content="Zbadaj 7 obszarów swojej strony w 59 sekund. Dowiedz się co blokuje Twój ruch, widoczność i konwersje.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.drstrona.pl/">
 <meta name="twitter:card" content="summary">
@@ -196,6 +196,16 @@ h1 em{font-style:italic;color:var(--accent)}
 .finding-fix{font-size:14px;background:var(--bg2);border-radius:10px;padding:10px 14px;line-height:1.6;color:var(--ink)}
 .fix-label{color:var(--accent);font-weight:500}
 
+.checklist{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.checklist-title{font-size:13px;font-weight:500;color:var(--ink3);margin-bottom:10px;font-family:var(--ff-mono);text-transform:uppercase;letter-spacing:0.04em}
+.check-item{display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-size:14px;color:var(--ink);line-height:1.5}
+.check-icon{flex-shrink:0;width:20px;font-size:14px;text-align:center}
+.check-ok{color:var(--green)}
+.check-fail{color:var(--red)}
+.check-warn{color:var(--amber)}
+.check-na{color:var(--ink3)}
+.check-detail{color:var(--ink3);font-size:12px;margin-left:30px;margin-top:-2px;margin-bottom:4px}
+
 .tag{display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;margin-left:8px;font-weight:500;font-family:var(--ff-mono);vertical-align:middle}
 .tag-live{background:rgba(30,138,76,0.1);color:var(--green);border:1px solid var(--green-bd)}
 .tag-html{background:rgba(91,79,232,0.08);color:var(--accent);border:1px solid rgba(91,79,232,0.2)}
@@ -296,7 +306,7 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
 
   <h1>Czy Twoja strona<br><em>naprawdę żyje?</em></h1>
 
-  <p class="hero-sub">Zbadaj 6 obszarów swojej strony w 59 sekund.<br>Dowiedz się co blokuje Twój ruch, widoczność i konwersje.</p>
+  <p class="hero-sub">Zbadaj 7 obszarów swojej strony w 59 sekund.<br>Dowiedz się co blokuje Twój ruch, widoczność i konwersje.</p>
 
   <div class="ekg-wrap">
     <div class="ekg-label">
@@ -343,6 +353,7 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
     <span class="check-pill">Indeksowanie</span>
     <span class="check-pill">Struktura techniczna</span>
     <span class="check-pill">RODO i prywatność</span>
+    <span class="check-pill">UX i wiarygodność</span>
   </div>
 </div>
 
@@ -559,25 +570,67 @@ async function runAnalysis(url){
   R.metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim()||null;
   R.canonical = doc.querySelector('link[rel="canonical"]')?.getAttribute('href')||null;
   R.ogTitle = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')||null;
+  R.ogDesc = doc.querySelector('meta[property="og:description"]')?.getAttribute('content')||null;
+  R.ogImage = doc.querySelector('meta[property="og:image"]')?.getAttribute('content')||null;
+  R.hasOG = !!(R.ogTitle||R.ogImage);
   const schemas=[...doc.querySelectorAll('script[type="application/ld+json"]')];
   R.schemas=schemas.map(s=>{try{return JSON.parse(s.textContent)}catch{return null}}).filter(Boolean);
   R.hasSchema=R.schemas.length>0;
+  R.schemaTypes=R.schemas.map(s=>s['@type']||'unknown').filter(Boolean);
+  R.isHttps=url.startsWith('https');
+  R.titleLength=R.title?R.title.length:0;
+  R.descLength=R.metaDesc?R.metaDesc.length:0;
 
   showStep(2); await delay(200);
   const h1s=[...doc.querySelectorAll('h1')];
   const h2s=[...doc.querySelectorAll('h2')];
+  const h3s=[...doc.querySelectorAll('h3')];
   R.h1Count=h1s.length;
   R.h1Text=h1s[0]?.textContent?.trim().substring(0,80)||null;
   R.h2Count=h2s.length;
+  R.h3Count=h3s.length;
   const imgs=[...doc.querySelectorAll('img')];
   R.totalImages=imgs.length;
   R.imgsNoAlt=imgs.filter(i=>!i.hasAttribute('alt')).length;
+  // word count
+  const bodyText=doc.body?.textContent||'';
+  R.wordCount=bodyText.split(/\s+/).filter(w=>w.length>1).length;
+  // CTA detection
+  const allBtns=[...doc.querySelectorAll('button,a[class*="btn"],a[class*="cta"],input[type="submit"],.btn,.button,[role="button"]')];
+  R.ctaCount=allBtns.length;
+  R.hasCTA=R.ctaCount>0;
+  // contact info
+  const bodyLower=bodyText.toLowerCase();
+  const htmlLower=html.toLowerCase();
+  R.hasPhone=!!(bodyText.match(/[\+]?[\d\s\-]{9,15}/)||htmlLower.includes('tel:'));
+  R.hasEmail=!!(bodyText.match(/[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)||htmlLower.includes('mailto:'));
+  R.hasAddress=bodyLower.includes('ul.')||bodyLower.includes('ul ')||bodyLower.includes('ulica')||bodyLower.includes('nip')||bodyLower.includes('regon');
+  // social media
+  R.socialLinks=[];
+  const socials=['facebook.com','linkedin.com','instagram.com','twitter.com','x.com','youtube.com','tiktok.com'];
+  const allLinks=[...doc.querySelectorAll('a')];
+  socials.forEach(s=>{if(allLinks.some(a=>(a.getAttribute('href')||'').includes(s))) R.socialLinks.push(s.replace('.com',''));});
+  R.hasSocial=R.socialLinks.length>0;
+  // forms
   const forms=[...doc.querySelectorAll('form')];
   R.hasForms=forms.length>0;
+  R.formCount=forms.length;
   R.formHasConsent=forms.some(f=>f.querySelector('input[type="checkbox"]'));
+  R.formHasLabels=forms.every(f=>[...f.querySelectorAll('input:not([type="hidden"]):not([type="submit"])')].every(i=>i.hasAttribute('aria-label')||i.hasAttribute('placeholder')||doc.querySelector('label[for="'+i.id+'"]')));
+  // links
   const links=[...doc.querySelectorAll('a')].map(a=>(a.textContent+' '+(a.getAttribute('href')||'')).toLowerCase());
   R.hasPrivacy=links.some(t=>t.includes('prywatno')||t.includes('privacy'));
   R.hasTerms=links.some(t=>t.includes('regulamin')||t.includes('terms'));
+  R.hasAbout=links.some(t=>t.includes('o nas')||t.includes('about')||t.includes('o firmie'));
+  R.totalLinks=allLinks.length;
+  R.internalLinks=allLinks.filter(a=>{const h=a.getAttribute('href')||'';return h.startsWith('/')||h.includes(R.domain);}).length;
+  R.externalLinks=R.totalLinks-R.internalLinks;
+  // favicon
+  R.hasFavicon=!!doc.querySelector('link[rel="icon"],link[rel="shortcut icon"],link[rel="apple-touch-icon"]');
+  // viewport
+  R.hasViewport=!!doc.querySelector('meta[name="viewport"]');
+  // language
+  R.lang=doc.documentElement?.getAttribute('lang')||null;
   R.hasCookieBanner=!!doc.querySelector('[class*="cookie"],[id*="cookie"],[class*="consent"],[id*="consent"],[class*="gdpr"],[id*="gdpr"],[class*="rodo"],[id*="rodo"]')||html.includes('CookieConsent')||html.includes('cookieconsent')||html.includes('cookie-banner')||html.includes('cookie_banner')||html.includes('cookie-consent')||html.includes('ciasteczk')||html.includes('cookiebot.com')||html.includes('cookieyes.com')||html.includes('osano.com')||html.includes('onetrust.com')||html.includes('iubenda.com')||html.includes('termsfeed.com')||html.includes('axeptio')||!!doc.querySelector('script[src*="cookie"],script[src*="consent"],script[src*="gdpr"]');
   R.hasGA=html.includes('google-analytics.com')||html.includes('gtag(');
   R.hasFB=html.includes('facebook.com/tr')||html.includes('fbq(');
@@ -625,8 +678,9 @@ async function runAnalysis(url){
     }
     R.gptBlocked=isBlockedInRobots(rt,'gptbot');
     R.claudeBlocked=isBlockedInRobots(rt,'claudebot');
+    R.perplexityBlocked=isBlockedInRobots(rt,'perplexitybot');
     R.robotsSitemap=rtl.includes('sitemap:');
-  }catch{R.hasRobots=false;R.gptBlocked=false;R.claudeBlocked=false;}
+  }catch{R.hasRobots=false;R.gptBlocked=false;R.claudeBlocked=false;R.perplexityBlocked=false;}
 
   showStep(5); await delay(500);
   R.mobileScore=null;
@@ -722,7 +776,7 @@ function renderReport(d,url){
     <div class="report-header">
       <div class="report-url">${d.url} · ${d.ts}</div>
       <div class="report-title">Wyniki zdrowia Twojej strony</div>
-      <div class="report-intro">Zbadaliśmy 6 ważnych obszarów Twojej strony. Zapoznaj się z wynikami i receptą.</div>
+      <div class="report-intro">Zbadaliśmy 7 ważnych obszarów Twojej strony. Zapoznaj się z wynikami i receptą.</div>
       <div class="report-meta">Analiza HTML + Google PageSpeed API · strona główna</div>
     </div>
 
@@ -761,7 +815,7 @@ function renderReport(d,url){
     ${buildSEO(d)}
     ${buildSpeed(d)}
 
-    <div class="gate-locked">Pozostałe 4 sekcje wymagają odblokowania</div>
+    <div class="gate-locked">Pozostałe 5 sekcji wymagają odblokowania</div>
 
     <div id="gatedContent" class="gate-wrap">
       <div id="gatedBlur" class="gate-blur">
@@ -769,6 +823,7 @@ function renderReport(d,url){
         ${buildStructure(d)}
         ${buildAI(d)}
         ${buildPrivacy(d)}
+        ${buildUX(d)}
         ${buildGood(d)}
       </div>
       <div id="gateOverlay" class="gate-overlay">
@@ -802,7 +857,17 @@ function renderReport(d,url){
   }
 }
 
-function sec(title,sub,dotColor,findings){
+function chk(ok, label, detail){
+  const icon = ok===true?'✓':ok===false?'✗':ok==='warn'?'⚠':'—';
+  const cls = ok===true?'check-ok':ok===false?'check-fail':ok==='warn'?'check-warn':'check-na';
+  return `<div class="check-item"><span class="check-icon ${cls}">${icon}</span><span>${label}</span></div>${detail?'<div class="check-detail">'+detail+'</div>':''}`;
+}
+
+function checklist(title, items){
+  return `<div class="checklist"><div class="checklist-title">${title}</div>${items.join('')}</div>`;
+}
+
+function sec(title,sub,dotColor,findings,checklistHtml){
   return `<div class="section">
     <div class="section-header">
       <div class="sev-dot" style="background:${dotColor}"></div>
@@ -818,6 +883,7 @@ function sec(title,sub,dotColor,findings){
           ${f.fix?`<div class="finding-fix"><span class="fix-label">Recepta:</span>${f.fix}</div>`:''}
         </div>
       </div>`).join('')}
+      ${checklistHtml||''}
     </div>
   </div>`;
 }
@@ -830,7 +896,17 @@ function buildSEO(d){
   if(!d.canonical) f.push({s:'amber',t:'Nie wskazano głównego adresu strony',src:'html',w:'Bez wskazania głównego adresu (canonical) Google może traktować różne wersje URL (z www, bez www, z ukośnikiem) jako osobne strony. To rozprasza "siłę SEO".',fix:'Dodaj canonical URL wskazujący na główny adres strony.'});
   if(!f.length) f.push({s:'green',t:'SEO podstawy wyglądają dobrze',src:'html',w:'Tytuł, opis i canonical są na miejscu.',fix:null});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
-  return sec('SEO',d.title?`"${d.title.substring(0,50)}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f);
+  const cl = checklist('Sprawdzone elementy',[
+    chk(!!d.title, 'Tytuł strony (title tag)', d.title?d.titleLength+' znaków: "'+d.title.substring(0,60)+(d.title.length>60?'…':'')+'"':null),
+    chk(!!d.metaDesc, 'Opis strony dla Google (meta description)', d.metaDesc?d.descLength+' znaków':null),
+    chk(!!d.canonical, 'Główny adres strony (canonical URL)'),
+    chk(d.h1Count===1, 'Jeden główny nagłówek (H1)', d.h1Text?'"'+d.h1Text.substring(0,60)+'"':null),
+    chk(d.h2Count>0, 'Podtytuły na stronie (H2)', d.h2Count+' znalezionych'),
+    chk(!!d.hasOG, 'Podgląd w social media (Open Graph)', d.ogImage?'Obrazek podglądu: tak':'Brak obrazka podglądu'),
+    chk(!!d.lang, 'Język strony ustawiony', d.lang?'Język: '+d.lang:null),
+    chk(d.wordCount>200, 'Wystarczająca ilość treści', d.wordCount+' słów'+(d.wordCount<200?' (mało, Google preferuje min. 300)':'')),
+  ]);
+  return sec('SEO',d.title?`"${d.title.substring(0,50)}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f,cl);
 }
 
 function buildIndex(d){
@@ -843,7 +919,14 @@ function buildIndex(d){
   else f.push({s:'green',t:'Instrukcje dla wyszukiwarek znalezione',src:'html',w:'Wyszukiwarki wiedzą co mogą indeksować.',fix:null});
   if(d.hasRobots&&!d.robotsSitemap) f.push({s:'amber',t:'Instrukcje nie linkują do mapy strony',src:'html',w:'Warto dodać odnośnik do mapy strony w pliku robots.txt. Ułatwia to wyszukiwarkom znalezienie pełnej listy podstron.',fix:'Dodaj linię "Sitemap: https://twoja-domena.pl/sitemap.xml" w robots.txt.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
-  return sec('Indeksowanie','Czy Google widzi Twoje podstrony',worst,f);
+  const cl = checklist('Sprawdzone elementy',[
+    chk(d.sitemapStatus==='found', 'Mapa strony dla Google (sitemap.xml)', d.sitemapStatus==='unknown'?'nie udało się sprawdzić':null),
+    chk(d.robotsStatus==='found', 'Instrukcje dla wyszukiwarek (robots.txt)', d.robotsStatus==='unknown'?'nie udało się sprawdzić':null),
+    chk(d.hasRobots?d.robotsSitemap:null, 'Mapa strony w instrukcjach (sitemap w robots.txt)'),
+    chk(d.isHttps, 'Bezpieczne połączenie (HTTPS)'),
+    chk(d.internalLinks>3, 'Linki wewnętrzne', d.internalLinks+' linków wewnętrznych'),
+  ]);
+  return sec('Indeksowanie','Czy Google widzi Twoje podstrony',worst,f,cl);
 }
 
 function buildStructure(d){
@@ -855,7 +938,15 @@ function buildStructure(d){
   else f.push({s:'green',t:`Główny nagłówek poprawny: "${(d.h1Text||'').substring(0,50)}"`,src:'html',w:'Strona ma jeden, jasny nagłówek główny.',fix:null});
   if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez opisu`,src:'html',w:'Obrazki bez opisu są niewidoczne dla Google Images i czytników ekranu (używanych przez osoby niewidome). Tracisz dodatkowe źródło ruchu z wyszukiwarki grafik.',fix:'Dodaj opis (alt) do każdego obrazka w ustawieniach CMS.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
-  return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f);
+  const cl = checklist('Sprawdzone elementy',[
+    chk(!!d.hasSchema, 'Dane o firmie dla Google (Schema.org)', d.schemaTypes.length?'Typy: '+d.schemaTypes.join(', '):null),
+    chk(d.h1Count===1, 'Jeden główny nagłówek (H1)'),
+    chk(d.h2Count>0, 'Podtytuły (H2)', d.h2Count+' znalezionych'),
+    chk(d.h3Count>0, 'Podpodtytuły (H3)', d.h3Count+' znalezionych'),
+    chk(d.totalImages>0?d.imgsNoAlt===0:true, 'Wszystkie obrazki mają opis (alt)', d.totalImages>0?d.imgsNoAlt+' bez opisu z '+d.totalImages:'brak obrazków'),
+    chk(d.totalImages>0, 'Obrazki na stronie', d.totalImages+' znalezionych'),
+  ]);
+  return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f,cl);
 }
 
 function buildSpeed(d){
@@ -870,7 +961,17 @@ function buildSpeed(d){
     f.push({s:'green',t:`Wynik mobilny: ${d.mobileScore}/100 — dobry wynik`,src:'live',w:`Strona ładuje się szybko na urządzeniach mobilnych.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:null});
   }
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
-  return sec('Szybkość strony',d.lcp?`LCP: ${d.lcp}${d.cls?' · CLS: '+d.cls:''}`:d.mobileScore!=null?`Score: ${d.mobileScore}/100`:'Google PageSpeed',worst,f);
+  const cl = checklist('Sprawdzone elementy',[
+    chk(d.mobileScore!=null?d.mobileScore>=50:null, 'Szybkość na telefonie (PageSpeed mobile)', d.mobileScore!=null?d.mobileScore+'/100':null),
+    chk(d.lcp?parseFloat(d.lcp)<=2.5:null, 'Czas do głównej treści (LCP)', d.lcp||'brak danych'),
+    chk(d.cls?parseFloat(d.cls)<=0.1:null, 'Stabilność layoutu (CLS)', d.cls||'brak danych'),
+    chk(d.fcp?parseFloat(d.fcp)<=1.8:null, 'Pierwsze wyświetlenie (FCP)', d.fcp||'brak danych'),
+    chk(d.tbt?parseFloat(d.tbt)<=200:null, 'Blokowanie interakcji (TBT)', d.tbt||'brak danych'),
+    chk(d.totalImages>0?d.imgsNoAlt===0:true, 'Obrazki z opisem (alt text)', d.totalImages>0?d.imgsNoAlt+' z '+d.totalImages+' bez opisu':'brak obrazków'),
+    chk(!!d.hasViewport, 'Dostosowanie do ekranu telefonu (viewport)'),
+    chk(!!d.hasFavicon, 'Ikona strony w przeglądarce (favicon)'),
+  ]);
+  return sec('Szybkość strony',d.lcp?`LCP: ${d.lcp}${d.cls?' · CLS: '+d.cls:''}`:d.mobileScore!=null?`Score: ${d.mobileScore}/100`:'Google PageSpeed',worst,f,cl);
 }
 
 function buildAI(d){
@@ -881,7 +982,15 @@ function buildAI(d){
   if(d.gptBlocked) f.push({s:'amber',t:'GPTBot (ChatGPT) ma zablokowany dostęp',src:'html',w:'Plik robots.txt blokuje GPTBot (bota ChatGPT). Gdy ktoś pyta ChatGPT o Twoją branżę, Twoja strona nie może być uwzględniona w odpowiedzi.',fix:'Jeśli chcesz być widoczny w AI: usuń blokadę GPTBot. Jeśli nie chcesz żeby AI trenowało na treściach, zostaw.'});
   if(!d.hasSchema) f.push({s:'amber',t:'AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenty AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony głównej.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
-  return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f);
+  const cl = checklist('Sprawdzone elementy',[
+    chk(d.llmsStatus==='found', 'Przewodnik dla AI (llms.txt)', d.llmsStatus==='unknown'?'nie udało się sprawdzić':null),
+    chk(!d.gptBlocked, 'ChatGPT może czytać stronę (GPTBot)', d.gptBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
+    chk(!d.claudeBlocked, 'Claude może czytać stronę (ClaudeBot)', d.claudeBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
+    chk(!d.perplexityBlocked, 'Perplexity może czytać stronę (PerplexityBot)', d.perplexityBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
+    chk(!!d.hasSchema, 'Dane strukturalne dla AI (Schema.org)'),
+    chk(d.wordCount>200, 'Wystarczająca treść tekstowa dla AI', d.wordCount+' słów'),
+  ]);
+  return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f,cl);
 }
 
 function buildPrivacy(d){
@@ -898,7 +1007,17 @@ function buildPrivacy(d){
   else if(trackers.length) f.push({s:'green',t:`Trackery wykryte, baner cookie obecny: ${trackers.join(', ')}`,src:'html',w:'Znaleźliśmy narzędzia analityczne i baner cookie. Upewnij się że trackery uruchamiają się dopiero po wyrażeniu zgody przez użytkownika.',fix:null});
   if(d.hasForms&&!d.formHasConsent) f.push({s:'amber',t:'Formularz bez widocznego checkboxa zgody',src:'html',w:'Jeśli formularz zbiera dane do marketingu, wymagana jest oddzielna zgoda użytkownika.',fix:'Dodaj checkbox z tekstem zgody marketingowej oddzielony od zgody na regulamin.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
-  return sec('RODO i prywatność','analiza HTML · nie ocena prawna',worst,f);
+  const cl = checklist('Sprawdzone elementy',[
+    chk(!!d.hasPrivacy, 'Link do polityki prywatności'),
+    chk(!!d.hasTerms, 'Link do regulaminu'),
+    chk(!!d.hasCookieBanner, 'Baner cookie / zgoda na śledzenie'),
+    chk(d.isHttps, 'Bezpieczne połączenie (HTTPS)'),
+    chk(!d.hasGA||d.hasCookieBanner, 'Google Analytics za zgodą użytkownika', d.hasGA?'GA wykryte':'GA nie wykryte'),
+    chk(!d.hasFB||d.hasCookieBanner, 'Facebook Pixel za zgodą użytkownika', d.hasFB?'Pixel wykryty':'Pixel nie wykryty'),
+    chk(!d.hasHotjar||d.hasCookieBanner, 'Hotjar za zgodą użytkownika', d.hasHotjar?'Hotjar wykryty':'Hotjar nie wykryty'),
+    chk(!d.hasForms||d.formHasConsent, 'Formularze z checkboxem zgody', d.hasForms?d.formCount+' formularzy':'brak formularzy'),
+  ]);
+  return sec('RODO i prywatność','analiza HTML · nie ocena prawna',worst,f,cl);
 }
 
 /* ── KEYBOARD ── */
@@ -942,20 +1061,45 @@ function unlockContent(){
 
 checkPurchase();
 
+function buildUX(d){
+  const f=[];
+  if(!d.hasCTA) f.push({s:'red',t:'Nie znaleziono wezwania do działania',src:'html',w:'Strona nie ma widocznego przycisku lub linku zachęcającego do kontaktu, zakupu lub zapisu. Użytkownik nie wie co ma zrobić dalej.',fix:'Dodaj wyraźny przycisk (np. "Skontaktuj się", "Zamów", "Sprawdź ofertę") widoczny bez przewijania.'});
+  if(!d.hasPhone&&!d.hasEmail) f.push({s:'amber',t:'Brak widocznych danych kontaktowych',src:'html',w:'Nie znaleźliśmy numeru telefonu ani adresu email na stronie. Klient który chce się skontaktować może zrezygnować.',fix:'Dodaj telefon i/lub email widoczny w nagłówku lub stopce strony.'});
+  if(!d.hasSocial) f.push({s:'amber',t:'Brak linków do social media',src:'html',w:'Linki do profili społecznościowych budują zaufanie i dają klientom dodatkowy sposób na kontakt.',fix:'Dodaj linki do swoich profili (Facebook, LinkedIn, Instagram) w stopce.'});
+  if(!f.length) f.push({s:'green',t:'Podstawy UX wyglądają dobrze',src:'html',w:'Strona ma przyciski akcji i dane kontaktowe.',fix:null});
+  const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
+  const cl = checklist('Sprawdzone elementy',[
+    chk(d.hasCTA, 'Przycisk zachęcający do działania (CTA)', d.ctaCount>0?d.ctaCount+' znalezionych':null),
+    chk(d.hasPhone, 'Numer telefonu na stronie'),
+    chk(d.hasEmail, 'Adres email na stronie'),
+    chk(d.hasAddress, 'Dane firmy (adres, NIP)'),
+    chk(d.hasSocial, 'Linki do social media', d.socialLinks.length?d.socialLinks.join(', '):null),
+    chk(d.hasAbout, 'Strona "O nas" / "O firmie"'),
+    chk(d.hasViewport, 'Strona działa na telefonie (responsywna)'),
+  ]);
+  return sec('UX i wiarygodność','Czy klient Ci zaufa i skontaktuje się',worst,f,cl);
+}
+
 function buildGood(d){
   const g=[];
-  if(d.title) g.push(`Tytuł strony jest ustawiony`);
-  if(d.h1Count===1) g.push(`Jeden poprawny H1: "${(d.h1Text||'').substring(0,50)}"`);
-  if(d.hasPrivacy) g.push('Polityka prywatności dostępna i podlinkowana');
-  if(d.hasCookieBanner) g.push('Baner cookie jest zaimplementowany');
-  if(d.hasRobots) g.push('Plik robots.txt istnieje');
-  if(d.hasSchema) g.push(`Dane strukturalne Schema.org znalezione`);
-  if(d.hasSitemap) g.push('Sitemap.xml znaleziony');
-  if(d.hasLlms) g.push('Plik llms.txt jest dostępny');
-  if(d.mobileScore!=null&&d.mobileScore>=80) g.push(`Dobry wynik PageSpeed mobile: ${d.mobileScore}/100`);
-  if(d.canonical) g.push('Canonical URL ustawiony poprawnie');
-  if(d.hasTerms) g.push('Regulamin dostępny i podlinkowany');
-  if(d.formHasConsent) g.push('Formularz zawiera checkboxy zgody');
+  if(d.title) g.push('Tytuł strony jest ustawiony');
+  if(d.metaDesc) g.push('Opis strony dla Google jest dodany');
+  if(d.h1Count===1) g.push('Jeden poprawny główny nagłówek');
+  if(d.hasPrivacy) g.push('Polityka prywatności dostępna');
+  if(d.hasCookieBanner) g.push('Baner cookie działa');
+  if(d.hasRobots) g.push('Instrukcje dla wyszukiwarek (robots.txt) istnieją');
+  if(d.hasSchema) g.push('Dane strukturalne dla Google znalezione');
+  if(d.hasSitemap) g.push('Mapa strony dla Google znaleziona');
+  if(d.hasLlms) g.push('Przewodnik dla AI (llms.txt) dostępny');
+  if(d.mobileScore!=null&&d.mobileScore>=80) g.push('Dobra szybkość na telefonie: '+d.mobileScore+'/100');
+  if(d.canonical) g.push('Główny adres strony ustawiony poprawnie');
+  if(d.hasTerms) g.push('Regulamin dostępny');
+  if(d.hasOG) g.push('Podgląd w social media (Open Graph) działa');
+  if(d.hasCTA) g.push('Przyciski zachęcające do działania znalezione');
+  if(d.hasPhone||d.hasEmail) g.push('Dane kontaktowe widoczne');
+  if(d.hasSocial) g.push('Linki do social media: '+d.socialLinks.join(', '));
+  if(d.isHttps) g.push('Bezpieczne połączenie (HTTPS)');
+  if(d.hasViewport) g.push('Strona dostosowana do telefonów');
   if(!g.length) return '';
   return `<div class="section">
     <div class="section-header">
