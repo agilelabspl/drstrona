@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://agilelabspl.github.io/drstrona/sitemap.xml
+Sitemap: https://www.drstrona.pl/sitemap.xml
