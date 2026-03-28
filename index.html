@@ -578,7 +578,7 @@ async function runAnalysis(url){
   const links=[...doc.querySelectorAll('a')].map(a=>(a.textContent+' '+(a.getAttribute('href')||'')).toLowerCase());
   R.hasPrivacy=links.some(t=>t.includes('prywatno')||t.includes('privacy'));
   R.hasTerms=links.some(t=>t.includes('regulamin')||t.includes('terms'));
-  R.hasCookieBanner=!!doc.querySelector('[class*="cookie"],[id*="cookie"],[class*="consent"],[id*="consent"],[class*="gdpr"],[id*="gdpr"],[class*="rodo"],[id*="rodo"]')||html.includes('CookieConsent')||html.includes('cookieconsent')||html.includes('cookie-banner')||html.includes('cookie_banner')||html.includes('ciasteczk');
+  R.hasCookieBanner=!!doc.querySelector('[class*="cookie"],[id*="cookie"],[class*="consent"],[id*="consent"],[class*="gdpr"],[id*="gdpr"],[class*="rodo"],[id*="rodo"]')||html.includes('CookieConsent')||html.includes('cookieconsent')||html.includes('cookie-banner')||html.includes('cookie_banner')||html.includes('cookie-consent')||html.includes('ciasteczk')||html.includes('cookiebot.com')||html.includes('cookieyes.com')||html.includes('osano.com')||html.includes('onetrust.com')||html.includes('iubenda.com')||html.includes('termsfeed.com')||html.includes('axeptio')||!!doc.querySelector('script[src*="cookie"],script[src*="consent"],script[src*="gdpr"]');
   R.hasGA=html.includes('google-analytics.com')||html.includes('gtag(');
   R.hasFB=html.includes('facebook.com/tr')||html.includes('fbq(');
   R.hasHotjar=html.includes('hotjar.com');
@@ -665,7 +665,7 @@ async function runAnalysis(url){
   if(!R.hasSchema) aiScore-=20;
   if(!R.hasRobots) aiScore-=15;
   // RODO
-  if(!R.hasPrivacy) privScore-=40;
+  if(!R.hasPrivacy) privScore-=30;
   if(!R.hasCookieBanner) privScore-=35;
   if(R.hasForms&&!R.formHasConsent) privScore-=25;
   R.seoScore=Math.max(0,seoScore);
@@ -875,7 +875,7 @@ function buildAI(d){
 
 function buildPrivacy(d){
   const f=[];
-  if(!d.hasPrivacy) f.push({s:'red',t:'Nie znaleziono polityki prywatności',src:'html',w:'Polityka prywatności jest wymagana gdy strona zbiera jakiekolwiek dane — nawet przez formularz kontaktowy lub Google Analytics.',fix:'Stwórz stronę z polityką prywatności i podlinkuj ją w stopce. Generator: termsfeed.com'});
+  if(!d.hasPrivacy) f.push({s:'amber',t:'Nie znaleziono linku do polityki prywatności',src:'html',w:'Nie znaleźliśmy linku do polityki prywatności w HTML strony. Jeśli link jest dodawany przez JavaScript (np. w banerze cookie), może być obecny ale niewidoczny dla naszej analizy. Polityka prywatności jest wymagana gdy strona zbiera jakiekolwiek dane.',fix:'Upewnij się że link do polityki prywatności jest widoczny w stopce strony (bezpośrednio w HTML, nie tylko w JS).'});
   else f.push({s:'green',t:'Polityka prywatności znaleziona',src:'html',w:'Link do polityki prywatności jest widoczny na stronie.',fix:null});
   if(!d.hasCookieBanner) f.push({s:'amber',t:'Nie wykryto banera cookie',src:'html',w:'Jeśli strona używa trackerów analitycznych lub reklamowych, baner cookie z możliwością odrzucenia jest wymagany.',fix:'Rozważ Cookiebot, CookieYes lub podobne narzędzie.'});
   else f.push({s:'green',t:'Baner cookie wykryty',src:'html',w:'Strona informuje użytkowników o używaniu cookies.',fix:null});
