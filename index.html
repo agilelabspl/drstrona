@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dr.Strona — raport zdrowia strony</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg:      #F7F3EE;
+  --bg2:     #EDE8E0;
+  --bg3:     #E4DDD3;
+  --card:    #FDFAF6;
+  --ink:     #1A1714;
+  --ink2:    #3D3832;
+  --ink3:    #6B6358;
+  --border:  rgba(26,23,20,0.1);
+  --border2: rgba(26,23,20,0.18);
+  --accent:  #5B4FE8;
+  --accent2: #7B70F0;
+  --green:   #1E8A4C;
+  --green-bg:#E8F5EE;
+  --green-bd:#B8DFC8;
+  --amber:   #A0620A;
+  --amber-bg:#FDF3E0;
+  --amber-bd:#F0CC88;
+  --red:     #C0392B;
+  --red-bg:  #FDECEA;
+  --red-bd:  #F0B8B2;
+  --ff-serif:'Fraunces', Georgia, serif;
+  --ff-sans: 'DM Sans', sans-serif;
+  --ff-mono: 'DM Mono', monospace;
+}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--ff-sans);min-height:100vh;line-height:1.6}
+
+/* ── NAV ── */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 40px;border-bottom:1px solid var(--border);
+  background:var(--card);position:sticky;top:0;z-index:100;
+}
+.nav-logo{display:flex;align-items:center;gap:10px;font-family:var(--ff-serif);font-size:18px;font-weight:400;color:var(--ink)}
+.nav-pulse{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:heartbeat 1.8s ease-in-out infinite}
+@keyframes heartbeat{0%,100%{transform:scale(1);opacity:1}14%{transform:scale(1.3)}28%{transform:scale(1)}42%{transform:scale(1.15)}70%{transform:scale(1)}}
+.nav-tag{font-size:11px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;color:var(--ink3);font-family:var(--ff-sans)}
+
+/* ── HERO ── */
+.hero{max-width:1080px;margin:0 auto;padding:80px 48px 60px;text-align:center}
+
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;font-family:var(--ff-mono);color:var(--accent);
+  background:rgba(91,79,232,0.08);border:1px solid rgba(91,79,232,0.2);
+  border-radius:20px;padding:5px 14px;margin-bottom:28px;
+  letter-spacing:0.04em;text-transform:uppercase;
+}
+
+h1{
+  font-family:var(--ff-serif);
+  font-size:clamp(36px,6vw,58px);
+  font-weight:300;
+  line-height:1.15;
+  letter-spacing:-0.02em;
+  color:var(--ink);
+  margin-bottom:20px;
+}
+h1 em{font-style:italic;color:var(--accent)}
+
+.hero-sub{
+  font-size:17px;color:var(--ink);max-width:620px;
+  margin:0 auto 48px;line-height:1.7;font-weight:400;
+}
+
+/* ── EKG CANVAS ── */
+.ekg-wrap{
+  max-width:760px;margin:0 auto 48px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:28px 32px;
+  position:relative;overflow:hidden;
+}
+.ekg-label{font-family:var(--ff-mono);font-size:11px;color:var(--ink3);margin-bottom:16px;text-align:left;display:flex;justify-content:space-between;align-items:center}
+.ekg-live{display:flex;align-items:center;gap:6px;color:var(--green)}
+.ekg-live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+#ekgCanvas{width:100%;height:72px;display:block}
+.ekg-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-top:20px;border-top:1px solid var(--border);padding-top:16px}
+.ekg-metric{text-align:center;padding:0 8px}
+.ekg-metric:not(:last-child){border-right:1px solid var(--border)}
+.ekg-metric-val{font-family:var(--ff-mono);font-size:26px;font-weight:500;line-height:1;letter-spacing:-0.02em;tabular-nums:true;font-variant-numeric:tabular-nums}
+.ekg-metric-lbl{font-size:11px;color:var(--ink2);margin-top:6px;font-family:var(--ff-mono);font-weight:500;text-transform:uppercase;letter-spacing:0.05em}
+
+/* ── INPUT ── */
+.input-wrap{
+  display:flex;gap:8px;background:var(--card);
+  border:1.5px solid var(--border2);border-radius:14px;
+  padding:7px;max-width:680px;margin:0 auto 16px;
+  transition:border-color .2s;
+}
+.input-wrap:focus-within{border-color:var(--accent)}
+.input-wrap input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:var(--ff-mono);font-size:14px;color:var(--ink);
+  padding:8px 12px;
+}
+.input-wrap input::placeholder{color:var(--ink3)}
+.btn-scan{
+  background:var(--accent);color:white;border:none;
+  border-radius:10px;padding:10px 24px;
+  font-family:var(--ff-sans);font-size:14px;font-weight:500;
+  cursor:pointer;white-space:nowrap;transition:background .2s,transform .1s;
+}
+.btn-scan:hover{background:var(--accent2)}
+.btn-scan:active{transform:scale(0.97)}
+.btn-scan:disabled{opacity:0.45;cursor:not-allowed}
+
+.checks-row{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:12px}
+.check-pill{font-size:12px;color:var(--ink3);background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 12px}
+
+/* ── LOADING ── */
+#loading{display:none;max-width:600px;margin:40px auto 0;text-align:left}
+.loading-inner{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px 28px}
+.loading-title{font-family:var(--ff-serif);font-size:18px;font-weight:300;margin-bottom:20px;color:var(--ink)}
+.loading-step{display:flex;align-items:center;gap:12px;padding:7px 0;font-size:13px;color:var(--ink3);border-bottom:1px solid var(--border)}
+.loading-step:last-child{border-bottom:none}
+.loading-step.active{color:var(--ink)}
+.loading-step.done{color:var(--green)}
+.step-ic{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .3s}
+.loading-step.active .step-ic{border-color:var(--accent);animation:spin .8s linear infinite}
+.loading-step.done .step-ic{background:var(--green);border-color:var(--green);color:white}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-bar{height:3px;background:var(--bg2);border-radius:2px;margin-top:20px;overflow:hidden}
+.loading-bar-fill{height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .4s ease}
+
+/* ── ERROR ── */
+.error-box{display:none;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:12px;padding:14px 20px;font-size:14px;color:var(--red);max-width:680px;margin:20px auto}
+
+/* ── REPORT ── */
+#report{display:none;max-width:1040px;margin:48px auto 80px;padding:0 40px}
+
+.report-header{margin-bottom:36px}
+.report-url{font-family:var(--ff-mono);font-size:13px;color:var(--ink3);margin-bottom:10px}
+.report-title{font-family:var(--ff-serif);font-size:36px;font-weight:300;margin-bottom:8px;letter-spacing:-0.02em}
+.report-intro{font-size:17px;color:var(--ink2);line-height:1.6;margin-bottom:10px}
+.report-meta{font-size:14px;color:var(--ink3)}
+
+.summary{border-radius:16px;padding:24px 28px;margin-bottom:28px;border:1px solid}
+.summary.good{background:var(--green-bg);border-color:var(--green-bd)}
+.summary.warn{background:var(--amber-bg);border-color:var(--amber-bd)}
+.summary.bad{background:var(--red-bg);border-color:var(--red-bd)}
+.summary h2{font-family:var(--ff-serif);font-size:22px;font-weight:400;margin-bottom:10px}
+.summary.good h2{color:var(--green)}
+.summary.warn h2{color:var(--amber)}
+.summary.bad h2{color:var(--red)}
+.summary p{font-size:16px;color:var(--ink);line-height:1.7}
+
+.status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.status-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.status-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.sdot-green{background:var(--green)}.sdot-amber{background:var(--amber)}.sdot-red{background:var(--red)}.sdot-gray{background:var(--ink3)}
+.status-label{font-size:14px;color:var(--ink2);font-family:var(--ff-mono);letter-spacing:0.03em;font-weight:500}
+.status-verdict{font-size:28px;font-weight:600;margin-bottom:0;font-family:var(--ff-mono)}
+.status-detail{font-size:14px;color:var(--ink);line-height:1.6}
+
+.section{background:var(--card);border:1px solid var(--border);border-radius:16px;margin-bottom:16px;overflow:hidden}
+.section-header{padding:18px 24px;display:flex;align-items:center;gap:12px}
+.sev-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.section-title{font-size:17px;font-weight:500;flex:1}
+.section-sub{font-size:13px;color:var(--ink3);font-family:var(--ff-mono)}
+.section-body{padding:0 24px 18px;border-top:1px solid var(--border)}
+
+.finding{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:14px}
+.finding:last-child{border-bottom:none;padding-bottom:0}
+.fdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:7px}
+.fdot-red{background:var(--red)}.fdot-amber{background:var(--amber)}.fdot-green{background:var(--green)}
+.finding-title{font-size:15px;font-weight:500;margin-bottom:6px}
+.finding-why{font-size:14px;color:var(--ink);line-height:1.7;margin-bottom:8px}
+.finding-fix{font-size:14px;background:var(--bg2);border-radius:10px;padding:10px 14px;line-height:1.6;color:var(--ink)}
+.fix-label{color:var(--accent);font-weight:500}
+
+.tag{display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;margin-left:8px;font-weight:500;font-family:var(--ff-mono);vertical-align:middle}
+.tag-live{background:rgba(30,138,76,0.1);color:var(--green);border:1px solid var(--green-bd)}
+.tag-html{background:rgba(91,79,232,0.08);color:var(--accent);border:1px solid rgba(91,79,232,0.2)}
+
+.ok-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;font-size:14px;color:var(--ink);border-bottom:1px solid var(--border);line-height:1.6}
+.ok-item:last-child{border-bottom:none}
+.ok-icon{width:20px;height:20px;border-radius:50%;background:var(--green-bg);border:1px solid var(--green-bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:11px;color:var(--green)}
+
+.disclaimer{font-size:11px;color:var(--ink3);border-top:1px solid var(--border);padding-top:16px;margin-top:8px;line-height:1.7}
+
+/* ── CONTENT GATE ── */
+.gate-wrap{position:relative;margin-top:-20px;padding-top:0}
+.gate-blur{filter:blur(6px);pointer-events:none;user-select:none;opacity:0.4;max-height:200px;overflow:hidden}
+.gate-overlay{
+  position:relative;z-index:10;
+  background:linear-gradient(180deg, rgba(247,243,238,0) 0%, var(--bg) 8%);
+  margin-top:-40px;padding:20px 24px 0;
+  text-align:center;
+}
+.gate-card{
+  max-width:640px;margin:0 auto;
+  background:var(--card);border:1.5px solid var(--border2);
+  border-radius:18px;padding:44px 40px;
+  box-shadow:0 8px 40px rgba(26,23,20,0.08);
+}
+.gate-icon{
+  width:56px;height:56px;border-radius:16px;
+  background:rgba(91,79,232,0.08);border:1px solid rgba(91,79,232,0.15);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 24px;font-size:26px;
+}
+.gate-card h3{
+  font-family:var(--ff-serif);font-size:32px;font-weight:300;
+  margin-bottom:14px;letter-spacing:-0.01em;
+}
+.gate-card p{font-size:18px;color:var(--ink2);line-height:1.7;margin-bottom:28px}
+.gate-fields{display:flex;gap:8px;margin-bottom:10px}
+.gate-fields input{
+  flex:1;background:var(--bg);border:1.5px solid var(--border2);
+  border-radius:10px;padding:14px 18px;font-family:var(--ff-sans);
+  font-size:16px;color:var(--ink);outline:none;transition:border-color .2s;
+}
+.gate-fields input:focus{border-color:var(--accent)}
+.gate-fields input::placeholder{color:var(--ink3)}
+.gate-btn-wrap{margin-bottom:16px}
+.gate-btn{
+  background:var(--accent);color:white;border:none;
+  border-radius:10px;padding:16px 32px;width:100%;
+  font-family:var(--ff-sans);font-size:18px;font-weight:500;
+  cursor:pointer;transition:background .2s,transform .1s;
+}
+.gate-btn:hover{background:var(--accent2)}
+.gate-btn:active{transform:scale(0.97)}
+.gate-price{font-family:var(--ff-serif);font-size:48px;font-weight:400;color:var(--ink);margin-bottom:4px;letter-spacing:-0.02em}
+.gate-price-sub{font-size:13px;color:var(--ink3);margin-bottom:20px}
+.gate-hint{font-size:13px;color:var(--ink3);line-height:1.5}
+.gate-success{
+  display:none;padding:20px;
+  background:var(--green-bg);border:1px solid var(--green-bd);
+  border-radius:10px;text-align:center;
+}
+.gate-success p{font-size:16px;color:var(--green);margin:0;font-weight:500}
+.gate-locked{display:flex;align-items:center;gap:8px;justify-content:center;font-size:14px;color:var(--ink2);margin-top:20px;margin-bottom:-4px;font-weight:500}
+.gate-locked::before{content:'';width:12px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239C9489' stroke-width='2'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0110 0v4'/%3E%3C/svg%3E") no-repeat center/contain}
+
+/* ── FOOTER ── */
+footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--ink3)}
+
+@media(max-width:540px){
+  .status-grid{grid-template-columns:1fr}
+  .input-wrap{flex-direction:column}
+  .btn-scan{width:100%}
+  nav{padding:16px 20px}
+  .hero{padding:48px 20px 40px}
+  h1{font-size:32px}
+  .ekg-metrics{grid-template-columns:repeat(3,1fr);gap:12px}
+  .ekg-metric:nth-child(3n){border-right:none}
+  .ekg-metric:nth-child(-n+3){border-bottom:1px solid var(--border);padding-bottom:12px}
+  .status-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="nav-pulse"></div>
+    Dr.Strona
+  </div>
+  <span class="nav-tag">MVP · v0.1</span>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">
+    <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block"></span>
+    Wyniki zdrowia Twojej strony w 30 sekund
+  </div>
+
+  <h1>Czy Twoja strona<br><em>naprawdę żyje?</em></h1>
+
+  <p class="hero-sub">Zbadaj 6 obszarów swojej strony w 30 sekund.<br>Dowiedz się co blokuje Twój ruch, widoczność i konwersje.</p>
+
+  <div class="ekg-wrap">
+    <div class="ekg-label">
+      <span>Wskaźniki zdrowia strony</span>
+      <span class="ekg-live"><span class="ekg-live-dot"></span>live demo</span>
+    </div>
+    <canvas id="ekgCanvas" width="576" height="72"></canvas>
+    <div class="ekg-metrics">
+      <div class="ekg-metric">
+        <div class="ekg-metric-val" id="m-seo">—</div>
+        <div class="ekg-metric-lbl">SEO</div>
+      </div>
+      <div class="ekg-metric">
+        <div class="ekg-metric-val" id="m-speed">—</div>
+        <div class="ekg-metric-lbl">Szybkość</div>
+      </div>
+      <div class="ekg-metric">
+        <div class="ekg-metric-val" id="m-ai">—</div>
+        <div class="ekg-metric-lbl">AI Ready</div>
+      </div>
+      <div class="ekg-metric">
+        <div class="ekg-metric-val" id="m-index">—</div>
+        <div class="ekg-metric-lbl">Indeksowanie</div>
+      </div>
+      <div class="ekg-metric">
+        <div class="ekg-metric-val" id="m-struct">—</div>
+        <div class="ekg-metric-lbl">Struktura</div>
+      </div>
+      <div class="ekg-metric">
+        <div class="ekg-metric-val" id="m-priv">—</div>
+        <div class="ekg-metric-lbl">RODO</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-wrap">
+    <input type="text" id="urlInput" placeholder="np. twoja-firma.pl" />
+    <button class="btn-scan" id="scanBtn" onclick="startScan()">Zbadaj stronę →</button>
+  </div>
+  <div class="checks-row">
+    <span class="check-pill">SEO</span>
+    <span class="check-pill">Szybkość strony</span>
+    <span class="check-pill">GEO (AI SEO)</span>
+    <span class="check-pill">Indeksowanie</span>
+    <span class="check-pill">Struktura techniczna</span>
+    <span class="check-pill">RODO i prywatność</span>
+  </div>
+</div>
+
+<div class="error-box" id="error-box"></div>
+<div id="loading">
+  <div class="loading-inner">
+    <div class="loading-title">Dr.Strona bada Twoją stronę…</div>
+    <div id="stepsList"></div>
+    <div class="loading-bar"><div class="loading-bar-fill" id="loadingBar"></div></div>
+  </div>
+</div>
+<div id="report"></div>
+
+<footer>Dr.Strona MVP · analiza techniczna, nie porada prawna · 2026</footer>
+
+<script>
+/* ── EKG ANIMATION ── */
+(function(){
+  const c = document.getElementById('ekgCanvas');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const mid = H/2;
+  let offset = 0;
+
+  function ekgY(x){
+    const p = (x % 120) / 120;
+    if(p < 0.3) return mid;
+    if(p < 0.38) return mid - (p-0.3)/0.08 * (H*0.35);
+    if(p < 0.46) return mid - H*0.35 + (p-0.38)/0.08 * H*0.65;
+    if(p < 0.54) return mid + H*0.2 - (p-0.46)/0.08 * H*0.25;
+    if(p < 0.62) return mid - H*0.05 + (p-0.54)/0.08 * H*0.1;
+    return mid;
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle = 'rgba(26,23,20,0.08)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([3,6]);
+    ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const grad = ctx.createLinearGradient(0,0,W,0);
+    grad.addColorStop(0,'rgba(91,79,232,0)');
+    grad.addColorStop(0.3,'rgba(91,79,232,0.9)');
+    grad.addColorStop(0.7,'rgba(91,79,232,0.9)');
+    grad.addColorStop(1,'rgba(91,79,232,0)');
+
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for(let x=0;x<W;x++){
+      const y = ekgY(x + offset);
+      if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    const dotX = W * 0.7;
+    const dotY = ekgY(dotX + offset);
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, 4, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(91,79,232,0.9)';
+    ctx.fill();
+
+    offset += 0.8;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ── ANIMATED METRICS (demo before scan) ── */
+(function(){
+  const metrics = [
+    {id:'m-seo',    base:78, range:14, speed:900},
+    {id:'m-speed',  base:55, range:20, speed:1100},
+    {id:'m-ai',     base:42, range:18, speed:1300},
+    {id:'m-index',  base:70, range:16, speed:1000},
+    {id:'m-struct', base:58, range:18, speed:1200},
+    {id:'m-priv',   base:65, range:16, speed:950},
+  ];
+  let scanDone = false;
+  window._lockMetrics = function(){ scanDone = true; };
+
+  function valColor(v){
+    return v >= 80 ? 'var(--green)' : v >= 50 ? 'var(--amber)' : 'var(--red)';
+  }
+
+  function tick(){
+    if(scanDone) return;
+    metrics.forEach(m => {
+      const el = document.getElementById(m.id);
+      if(!el) return;
+      const wobble = Math.sin(Date.now() / m.speed) * m.range/2;
+      const val = Math.round(m.base + wobble);
+      el.textContent = val;
+      el.style.color = valColor(val);
+    });
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+/* ── SCANNER ── */
+const STEPS = [
+  'Otwieram Twoją stronę…',
+  'Sprawdzam jak widzi ją Google…',
+  'Analizuję strukturę treści…',
+  'Sprawdzam czy Google zna wszystkie podstrony…',
+  'Sprawdzam widoczność dla AI…',
+  'Mierzę szybkość ładowania…',
+  'Sprawdzam prywatność i RODO…',
+  'Przygotowuję raport…'
+];
+
+let stepEls=[], currentStep=0;
+
+function showStep(i){
+  if(stepEls[currentStep]){
+    stepEls[currentStep].classList.remove('active');
+    stepEls[currentStep].classList.add('done');
+    stepEls[currentStep].querySelector('.step-ic').textContent='✓';
+  }
+  currentStep=i;
+  if(stepEls[i]) stepEls[i].classList.add('active');
+  document.getElementById('loadingBar').style.width = Math.round((i/STEPS.length)*100)+'%';
+}
+
+async function startScan(){
+  let url = document.getElementById('urlInput').value.trim().replace(/\/+$/,'');
+  if(!url){ document.getElementById('urlInput').focus(); return; }
+  if(!url.startsWith('http')) url = 'https://'+url;
+  try{ new URL(url); }catch{
+    const eb=document.getElementById('error-box');
+    eb.style.display='block'; eb.textContent='Nieprawidłowy adres. Wpisz np. twoja-firma.pl';
+    return;
+  }
+
+  document.getElementById('scanBtn').disabled=true;
+  document.getElementById('report').style.display='none';
+  document.getElementById('error-box').style.display='none';
+
+  const loading = document.getElementById('loading');
+  loading.style.display='block';
+  loading.scrollIntoView({behavior:'smooth'});
+
+  const list=document.getElementById('stepsList');
+  list.innerHTML=''; stepEls=[]; currentStep=0;
+  STEPS.forEach(s=>{
+    const li=document.createElement('div');
+    li.className='loading-step';
+    li.innerHTML=`<span class="step-ic"></span><span>${s}</span>`;
+    list.appendChild(li); stepEls.push(li);
+  });
+  stepEls[0].classList.add('active');
+
+  try{
+    const data = await runAnalysis(url);
+    loading.style.display='none';
+    renderReport(data, url);
+  }catch(e){
+    loading.style.display='none';
+    const eb=document.getElementById('error-box');
+    eb.style.display='block';
+    eb.textContent='Błąd: '+e.message+'. Sprawdź adres i spróbuj ponownie.';
+  }
+  document.getElementById('scanBtn').disabled=false;
+}
+
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function fetchViaProxy(targetUrl){
+  const proxies = [
+    { url: u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, type:'json' },
+    { url: u => `https://corsproxy.io/?${encodeURIComponent(u)}`, type:'text' },
+    { url: u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, type:'text' },
+  ];
+
+  for(const proxy of proxies){
+    try{
+      const ctrl = new AbortController();
+      const timer = setTimeout(()=>ctrl.abort(), 10000);
+      const res = await fetch(proxy.url(targetUrl), {signal:ctrl.signal});
+      clearTimeout(timer);
+      if(!res.ok) continue;
+      if(proxy.type==='json'){
+        const j = await res.json();
+        if(j?.contents?.length > 50) return j.contents;
+      } else {
+        const t = await res.text();
+        if(t?.length > 50 && !t.includes('<title>Error</title>')) return t;
+      }
+    }catch(e){ continue; }
+  }
+  return null;
+}
+
+async function runAnalysis(url){
+  const domain = new URL(url).hostname;
+  const R = {url, domain, ts: new Date().toLocaleString('pl-PL')};
+
+  showStep(0); await delay(300);
+  let html='', doc=null;
+  const mainHtml = await fetchViaProxy(url);
+  if(!mainHtml) throw new Error('Nie można pobrać strony — sprawdź adres lub spróbuj za chwilę');
+  html = mainHtml;
+  doc = new DOMParser().parseFromString(html,'text/html');
+
+  showStep(1); await delay(200);
+  R.title = doc.querySelector('title')?.textContent?.trim()||null;
+  R.metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim()||null;
+  R.canonical = doc.querySelector('link[rel="canonical"]')?.getAttribute('href')||null;
+  R.ogTitle = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')||null;
+  const schemas=[...doc.querySelectorAll('script[type="application/ld+json"]')];
+  R.schemas=schemas.map(s=>{try{return JSON.parse(s.textContent)}catch{return null}}).filter(Boolean);
+  R.hasSchema=R.schemas.length>0;
+
+  showStep(2); await delay(200);
+  const h1s=[...doc.querySelectorAll('h1')];
+  const h2s=[...doc.querySelectorAll('h2')];
+  R.h1Count=h1s.length;
+  R.h1Text=h1s[0]?.textContent?.trim().substring(0,80)||null;
+  R.h2Count=h2s.length;
+  const imgs=[...doc.querySelectorAll('img')];
+  R.totalImages=imgs.length;
+  R.imgsNoAlt=imgs.filter(i=>!i.getAttribute('alt')||i.getAttribute('alt').trim()==='').length;
+  const forms=[...doc.querySelectorAll('form')];
+  R.hasForms=forms.length>0;
+  R.formHasConsent=forms.some(f=>f.querySelector('input[type="checkbox"]'));
+  const links=[...doc.querySelectorAll('a')].map(a=>(a.textContent+' '+(a.getAttribute('href')||'')).toLowerCase());
+  R.hasPrivacy=links.some(t=>t.includes('prywatno')||t.includes('privacy'));
+  R.hasTerms=links.some(t=>t.includes('regulamin')||t.includes('terms'));
+  R.hasCookieBanner=html.includes('cookie')||html.includes('ciasteczk')||!!doc.querySelector('[class*="cookie"],[id*="cookie"],[class*="consent"],[id*="consent"]');
+  R.hasGA=html.includes('google-analytics.com')||html.includes('gtag(');
+  R.hasFB=html.includes('facebook.com/tr')||html.includes('fbq(');
+  R.hasHotjar=html.includes('hotjar.com');
+
+  showStep(3); await delay(200);
+  try{
+    const sc = await fetchViaProxy('https://'+domain+'/sitemap.xml');
+    R.hasSitemap=!!(sc&&(sc.includes('<urlset')||sc.includes('<sitemapindex')));
+  }catch{R.hasSitemap=false;}
+
+  showStep(4); await delay(200);
+  try{
+    const lc = await fetchViaProxy('https://'+domain+'/llms.txt');
+    R.hasLlms=!!(lc&&lc.length>20&&!lc.toLowerCase().includes('not found')&&!lc.includes('<!doctype')&&!lc.includes('<html'));
+  }catch{R.hasLlms=false;}
+  try{
+    const rc = await fetchViaProxy('https://'+domain+'/robots.txt');
+    const rt=rc||'';
+    R.hasRobots=rt.length>5;
+    const rtl=rt.toLowerCase();
+    R.gptBlocked=rtl.includes('gptbot')&&rtl.includes('disallow: /');
+    R.claudeBlocked=rtl.includes('claudebot')&&rtl.includes('disallow: /');
+    R.robotsSitemap=rtl.includes('sitemap:');
+  }catch{R.hasRobots=false;R.gptBlocked=false;R.claudeBlocked=false;}
+
+  showStep(5); await delay(500);
+  R.mobileScore=null;
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      const ctrl=new AbortController();
+      const timer=setTimeout(()=>ctrl.abort(),15000);
+      const psRes=await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile&key=AIzaSyB9_8AJwuTQVVHOYSj14gz0vwmLN0GHn3Y`,{signal:ctrl.signal});
+      clearTimeout(timer);
+      const ps=await psRes.json();
+      if(ps.error){ if(attempt===0){await delay(2000);continue;} break; }
+      R.mobileScore=ps.lighthouseResult?.categories?.performance?.score!=null?Math.round(ps.lighthouseResult.categories.performance.score*100):null;
+      const a=ps.lighthouseResult?.audits||{};
+      R.lcp=a['largest-contentful-paint']?.displayValue||null;
+      R.cls=a['cumulative-layout-shift']?.displayValue||null;
+      R.fcp=a['first-contentful-paint']?.displayValue||null;
+      R.tbt=a['total-blocking-time']?.displayValue||null;
+      break;
+    }catch{ if(attempt===0){await delay(2000);continue;} }
+  }
+  R.pageSpeedUrl='https://pagespeed.web.dev/analysis?url='+encodeURIComponent(url);
+
+  showStep(6); await delay(200);
+  showStep(7); await delay(400);
+
+  // compute sub-scores (6 areas)
+  let seoScore=100, aiScore=100, privScore=100, indexScore=100, structScore=100;
+  // SEO: title, meta desc, canonical
+  if(!R.title) seoScore-=35;
+  if(!R.metaDesc) seoScore-=35;
+  if(!R.canonical) seoScore-=30;
+  // Indeksowanie: sitemap, robots
+  if(!R.hasSitemap) indexScore-=40;
+  if(!R.hasRobots) indexScore-=35;
+  if(!R.robotsSitemap) indexScore-=25;
+  // Struktura: schema, h1, alt
+  if(!R.hasSchema) structScore-=35;
+  if(R.h1Count===0) structScore-=30;
+  if(R.h1Count>1) structScore-=15;
+  if(R.imgsNoAlt>0) structScore-=20;
+  // AI Ready
+  if(!R.hasLlms) aiScore-=35;
+  if(R.gptBlocked) aiScore-=30;
+  if(!R.hasSchema) aiScore-=20;
+  if(!R.hasRobots) aiScore-=15;
+  // RODO
+  if(!R.hasPrivacy) privScore-=40;
+  if(!R.hasCookieBanner) privScore-=35;
+  if(R.hasForms&&!R.formHasConsent) privScore-=25;
+  R.seoScore=Math.max(0,seoScore);
+  R.aiScore=Math.max(0,aiScore);
+  R.privScore=Math.max(0,privScore);
+  R.indexScore=Math.max(0,indexScore);
+  R.structScore=Math.max(0,structScore);
+  R.speedScore=R.mobileScore;
+
+  // stop demo animation, show real scores
+  if(window._lockMetrics) window._lockMetrics();
+  const _sc = id => document.getElementById(id);
+  const _cv = (el,v) => { el.textContent=v; el.style.color=scoreColor(v); };
+  _cv(_sc('m-seo'), R.seoScore);
+  _cv(_sc('m-speed'), R.speedScore!=null?R.speedScore:'?');
+  _cv(_sc('m-ai'), R.aiScore);
+  _cv(_sc('m-index'), R.indexScore);
+  _cv(_sc('m-struct'), R.structScore);
+  _cv(_sc('m-priv'), R.privScore);
+
+  return R;
+}
+
+/* ── RENDER ── */
+function scoreColor(s){ return s>=80?'var(--green)':s>=50?'var(--amber)':'var(--red)'; }
+
+function renderReport(d,url){
+  const el=document.getElementById('report');
+  el.style.display='block';
+
+  const issues=[];
+  if(!d.title) issues.push('brak tytułu strony');
+  if(!d.metaDesc) issues.push('Google nie ma opisu Twojej strony do wyświetlenia');
+  if(d.h1Count===0) issues.push('strona nie mówi jasno o czym jest');
+  if(!d.hasSitemap) issues.push('Google może nie widzieć części Twoich podstron');
+  if(!d.hasLlms) issues.push('ChatGPT i inne AI nie wiedzą co oferujesz');
+  if(!d.hasSchema) issues.push('wyszukiwarki nie rozumieją czym się zajmujesz');
+  if(d.mobileScore!=null&&d.mobileScore<50) issues.push('strona ładuje się za wolno na telefonach');
+
+  const critical=issues.filter((_,i)=>i<3).length;
+  const sc=critical>1?'bad':issues.length>2?'warn':'good';
+  const stitle=critical>1?'Twoja strona może tracić klientów':issues.length>1?'Strona działa, ale mogłaby przyciągać więcej klientów':'Strona jest w dobrej formie';
+  const stext=issues.length?issues.slice(0,3).join('. ')+'.':'Nie znaleziono poważnych problemów. Twoja strona jest dobrze przygotowana.';
+
+  el.innerHTML=`
+    <div class="report-header">
+      <div class="report-url">${d.url} · ${d.ts}</div>
+      <div class="report-title">Wyniki zdrowia Twojej strony</div>
+      <div class="report-intro">Zbadaliśmy 6 ważnych obszarów Twojej strony. Zapoznaj się z wynikami i receptą.</div>
+      <div class="report-meta">Analiza HTML + Google PageSpeed API · strona główna</div>
+    </div>
+
+    <div class="summary ${sc}">
+      <h2>${stitle}</h2>
+      <p>${stext}</p>
+    </div>
+
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.seoScore)}"></div><div class="status-label">SEO</div></div>
+        <div class="status-verdict" style="color:${scoreColor(d.seoScore)}">${d.seoScore}/100</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top"><div class="sdot" style="background:${d.mobileScore==null?'var(--ink3)':scoreColor(d.mobileScore)}"></div><div class="status-label">Szybkość</div></div>
+        <div class="status-verdict" style="color:${d.mobileScore==null?'var(--ink3)':scoreColor(d.mobileScore)}">${d.mobileScore!=null?d.mobileScore+'/100':'?'}</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.aiScore)}"></div><div class="status-label">AI Ready (GEO)</div></div>
+        <div class="status-verdict" style="color:${scoreColor(d.aiScore)}">${d.aiScore}/100</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.indexScore)}"></div><div class="status-label">Indeksowanie</div></div>
+        <div class="status-verdict" style="color:${scoreColor(d.indexScore)}">${d.indexScore}/100</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.structScore)}"></div><div class="status-label">Struktura</div></div>
+        <div class="status-verdict" style="color:${scoreColor(d.structScore)}">${d.structScore}/100</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.privScore)}"></div><div class="status-label">RODO</div></div>
+        <div class="status-verdict" style="color:${scoreColor(d.privScore)}">${d.privScore}/100</div>
+      </div>
+    </div>
+
+    ${buildSEO(d)}
+    ${buildSpeed(d)}
+
+    <div class="gate-locked">Pozostałe 4 sekcje wymagają odblokowania</div>
+
+    <div id="gatedContent" class="gate-wrap">
+      <div id="gatedBlur" class="gate-blur">
+        ${buildIndex(d)}
+        ${buildStructure(d)}
+        ${buildAI(d)}
+        ${buildPrivacy(d)}
+        ${buildGood(d)}
+      </div>
+      <div id="gateOverlay" class="gate-overlay">
+        <div class="gate-card">
+          <div class="gate-icon">🩺</div>
+          <h3>Odblokuj pełne wyniki i receptę</h3>
+          <p>Odblokuj pełne wyniki badania i receptę co poprawić, żeby Twoja strona przyciągała więcej klientów.</p>
+          <div id="gateForm">
+            <div class="gate-price">29 zł</div>
+            <div class="gate-btn-wrap">
+              <button class="gate-btn" onclick="purchaseReport()">Kup pełne wyniki badania</button>
+            </div>
+            <div class="gate-hint">Jednorazowa płatność. Bezpieczna płatność przez Stripe.</div>
+          </div>
+          <div class="gate-success" id="gateSuccess">
+            <p>Płatność potwierdzona. Oto pełne wyniki badania.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      Analiza wykonana automatycznie na podstawie HTML strony głównej i Google PageSpeed Insights API (dane Lighthouse w czasie rzeczywistym). HTML pobierany przez publiczne proxy — możliwe opóźnienia lub braki dla stron z agresywnym blokowaniem botów. Nie sprawdzano: certyfikatu SSL, trackerów JS wymagających wykonania skryptów, kontrastu kolorów, dostępności elementów dynamicznych. Sub-score'y (SEO, AI, Prywatność) są uproszczonymi wskaźnikami opartymi na wykrytych sygnałach — nie stanowią audytu prawnego ani pełnej oceny zgodności.
+    </div>`;
+
+  el.scrollIntoView({behavior:'smooth'});
+}
+
+function sec(title,sub,dotColor,findings){
+  return `<div class="section">
+    <div class="section-header">
+      <div class="sev-dot" style="background:${dotColor}"></div>
+      <span class="section-title">${title}</span>
+      <span class="section-sub">${sub}</span>
+    </div>
+    <div class="section-body">${findings.map(f=>`
+      <div class="finding">
+        <div class="fdot fdot-${f.s}"></div>
+        <div>
+          <div class="finding-title">${f.t}<span class="tag tag-${f.src}">${f.src==='live'?'live API':'HTML'}</span></div>
+          <div class="finding-why">${f.w}</div>
+          ${f.fix?`<div class="finding-fix"><span class="fix-label">Recepta:</span>${f.fix}</div>`:''}
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function buildSEO(d){
+  const f=[];
+  if(!d.title) f.push({s:'red',t:'Brak tytułu strony',src:'html',w:'Google nie wie jak opisać Twoją stronę. Brak tytułu to jeden z najbardziej podstawowych błędów SEO.',fix:'Dodaj <title> w sekcji <head>, np. "Nazwa firmy. Co robisz, dla kogo, gdzie".'});
+  else if(d.title.length>65) f.push({s:'amber',t:`Tytuł za długi (${d.title.length} znaków)`,src:'html',w:'Google obcina tytuły po ok. 60 znakach. Twój tytuł może być urwany w wynikach.',fix:'Skróć tytuł do maks. 60 znaków. Najważniejsze informacje na początku.'});
+  if(!d.metaDesc) f.push({s:'red',t:'Brak meta description',src:'html',w:'Google sam wybierze losowy fragment tekstu do wyświetlenia w wynikach zamiast zachęcającego opisu. Tracisz kontrolę nad pierwszym wrażeniem.',fix:'Dodaj meta description (150-160 znaków): co robisz, dla kogo, jaka korzyść.'});
+  if(!d.canonical) f.push({s:'amber',t:'Brak canonical URL',src:'html',w:'Bez canonical Google może traktować różne wersje adresu (z www, bez www, z ukośnikiem) jako osobne strony. To rozprasza "siłę SEO".',fix:'Dodaj <link rel="canonical"> wskazujący na główny adres strony.'});
+  if(!f.length) f.push({s:'green',t:'SEO podstawy wyglądają dobrze',src:'html',w:'Tytuł, opis i canonical są na miejscu.',fix:null});
+  const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
+  return sec('SEO',d.title?`"${d.title.substring(0,50)}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f);
+}
+
+function buildIndex(d){
+  const f=[];
+  if(!d.hasSitemap) f.push({s:'red',t:'Brak sitemap.xml',src:'html',w:'Google nie ma listy Twoich podstron. Może nie indeksować regularnie całej witryny, szczególnie nowych treści.',fix:'Wygeneruj sitemap.xml i zgłoś w Google Search Console. WordPress: wtyczka Yoast lub RankMath.'});
+  else f.push({s:'green',t:'Sitemap.xml znaleziony',src:'html',w:'Google ma dostęp do listy Twoich podstron.',fix:null});
+  if(!d.hasRobots) f.push({s:'amber',t:'Brak pliku robots.txt',src:'html',w:'Robots.txt mówi wyszukiwarkom które strony mogą odwiedzać. Bez niego Google indeksuje wszystko, w tym strony które może nie powinny być widoczne.',fix:'Stwórz plik robots.txt w głównym katalogu strony.'});
+  else f.push({s:'green',t:'Robots.txt znaleziony',src:'html',w:'Wyszukiwarki wiedzą co mogą indeksować.',fix:null});
+  if(d.hasRobots&&!d.robotsSitemap) f.push({s:'amber',t:'Robots.txt nie linkuje do sitemap',src:'html',w:'Warto dodać odnośnik do sitemap.xml w pliku robots.txt. Ułatwia to wyszukiwarkom znalezienie pełnej listy podstron.',fix:'Dodaj linię "Sitemap: https://twoja-domena.pl/sitemap.xml" w robots.txt.'});
+  const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
+  return sec('Indeksowanie','Czy Google widzi Twoje podstrony',worst,f);
+}
+
+function buildStructure(d){
+  const f=[];
+  if(!d.hasSchema) f.push({s:'amber',t:'Brak danych strukturalnych',src:'html',w:'Google i asystenci AI nie wiedzą czym jest Twoja firma, co oferujesz i gdzie jesteś. Tracisz "rich results" (gwiazdki, FAQ, logo) w wynikach wyszukiwania.',fix:'Dodaj JSON-LD z danymi Organization lub LocalBusiness.'});
+  else f.push({s:'green',t:'Dane strukturalne znalezione',src:'html',w:'Google rozumie strukturę Twojej strony.',fix:null});
+  if(d.h1Count===0) f.push({s:'red',t:'Brak nagłówka H1',src:'html',w:'H1 to najważniejszy nagłówek strony. Mówi Google i użytkownikom o czym jest ta strona. Jego brak osłabia widoczność.',fix:'Dodaj jeden H1 z główną frazą opisującą Twoją działalność.'});
+  else if(d.h1Count>1) f.push({s:'amber',t:`Za dużo nagłówków H1 (${d.h1Count})`,src:'html',w:'Na stronie powinien być dokładnie jeden H1. Wiele H1 dezorientuje wyszukiwarki.',fix:'Zostaw jeden H1, pozostałe zamień na H2.'});
+  else f.push({s:'green',t:`Nagłówek H1 poprawny: "${(d.h1Text||'').substring(0,50)}"`,src:'html',w:'Strona ma jeden, jasny nagłówek główny.',fix:null});
+  if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez opisu`,src:'html',w:'Obrazki bez opisu (alt text) są niewidoczne dla Google Images i czytników ekranu. Tracisz dodatkowe źródło ruchu.',fix:'Dodaj krótki opis do każdego obrazka w ustawieniach CMS.'});
+  const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
+  return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f);
+}
+
+function buildSpeed(d){
+  const f=[];
+  if(d.mobileScore==null){
+    f.push({s:'amber',t:'Google PageSpeed chwilowo niedostępny',src:'live',w:'API nie zwróciło danych po 2 próbach. To normalne przy dużym ruchu. Wynik szybkości nie wpływa na pozostałe sekcje raportu.',fix:`Sprawdź ręcznie: <a href="${d.pageSpeedUrl||'https://pagespeed.web.dev'}" target="_blank" style="color:var(--accent);text-decoration:underline">otwórz PageSpeed Insights →</a>`});
+  } else if(d.mobileScore<50){
+    f.push({s:'red',t:`Wynik mobilny: ${d.mobileScore}/100 — za wolno`,src:'live',w:`Wynik poniżej 50 to poważny problem. Badania Google pokazują że 53% użytkowników zamyka stronę jeśli ładuje się dłużej niż 3 sekundy. Tracisz klientów zanim zobaczą ofertę.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:`Szczegóły: <a href="${d.pageSpeedUrl||'https://pagespeed.web.dev'}" target="_blank" style="color:var(--accent);text-decoration:underline">otwórz PageSpeed Insights →</a>`});
+  } else if(d.mobileScore<80){
+    f.push({s:'amber',t:`Wynik mobilny: ${d.mobileScore}/100 — jest pole do poprawy`,src:'live',w:`Strona działa, ale wolniej niż powinna. Część użytkowników może ją opuszczać.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:`Szczegóły: <a href="${d.pageSpeedUrl||'https://pagespeed.web.dev'}" target="_blank" style="color:var(--accent);text-decoration:underline">otwórz PageSpeed Insights →</a>`});
+  } else {
+    f.push({s:'green',t:`Wynik mobilny: ${d.mobileScore}/100 — dobry wynik`,src:'live',w:`Strona ładuje się szybko na urządzeniach mobilnych.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:null});
+  }
+  const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
+  return sec('Szybkość strony',d.lcp?`LCP: ${d.lcp}${d.cls?' · CLS: '+d.cls:''}`:d.mobileScore!=null?`Score: ${d.mobileScore}/100`:'Google PageSpeed',worst,f);
+}
+
+function buildAI(d){
+  const f=[];
+  if(!d.hasLlms) f.push({s:'amber',t:'Brak pliku llms.txt',src:'html',w:'llms.txt to nowy standard który mówi asystentom AI (ChatGPT, Claude, Perplexity) które strony są najważniejsze na Twoim serwisie. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz /llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org — 15 minut roboty.'});
+  else f.push({s:'green',t:'Plik llms.txt znaleziony',src:'html',w:'Asystenty AI mogą odczytać strukturę i najważniejsze treści serwisu.',fix:null});
+  if(d.gptBlocked) f.push({s:'amber',t:'GPTBot (ChatGPT) ma zablokowany dostęp',src:'html',w:'Plik robots.txt zawiera blokadę dla GPTBot. Gdy ktoś pyta ChatGPT o Twoją branżę — Twoja strona nie może być uwzględniona.',fix:'Jeśli chcesz być widoczny w AI: usuń blokadę GPTBot. Jeśli nie chcesz żeby AI trenowało na treściach — zostaw.'});
+  if(!d.hasSchema) f.push({s:'amber',t:'Brak Schema.org — AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenty AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj Organization lub LocalBusiness JSON-LD do strony głównej.'});
+  const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
+  return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f);
+}
+
+function buildPrivacy(d){
+  const f=[];
+  if(!d.hasPrivacy) f.push({s:'red',t:'Nie znaleziono polityki prywatności',src:'html',w:'Polityka prywatności jest wymagana gdy strona zbiera jakiekolwiek dane — nawet przez formularz kontaktowy lub Google Analytics.',fix:'Stwórz stronę z polityką prywatności i podlinkuj ją w stopce. Generator: termsfeed.com'});
+  else f.push({s:'green',t:'Polityka prywatności znaleziona',src:'html',w:'Link do polityki prywatności jest widoczny na stronie.',fix:null});
+  if(!d.hasCookieBanner) f.push({s:'amber',t:'Nie wykryto banera cookie',src:'html',w:'Jeśli strona używa trackerów analitycznych lub reklamowych, baner cookie z możliwością odrzucenia jest wymagany.',fix:'Rozważ Cookiebot, CookieYes lub podobne narzędzie.'});
+  else f.push({s:'green',t:'Baner cookie wykryty',src:'html',w:'Strona informuje użytkowników o używaniu cookies.',fix:null});
+  const trackers=[];
+  if(d.hasGA) trackers.push('Google Analytics');
+  if(d.hasFB) trackers.push('Facebook Pixel');
+  if(d.hasHotjar) trackers.push('Hotjar');
+  if(trackers.length) f.push({s:'amber',t:`Wykryto trackery w HTML: ${trackers.join(', ')}`,src:'html',w:'Skrypty analityczne i marketingowe obecne w kodzie strony. Nie możemy sprawdzić czy uruchamiają się przed zgodą użytkownika (wymaga to uruchomienia przeglądarki z JS).',fix:'Upewnij się że Twój CMP (Cookiebot, CookieYes) blokuje te skrypty do momentu wyrażenia zgody.'});
+  if(d.hasForms&&!d.formHasConsent) f.push({s:'amber',t:'Formularz bez widocznego checkboxa zgody',src:'html',w:'Jeśli formularz zbiera dane do marketingu, wymagana jest oddzielna zgoda użytkownika.',fix:'Dodaj checkbox z tekstem zgody marketingowej oddzielony od zgody na regulamin.'});
+  const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
+  return sec('RODO i prywatność','analiza HTML · nie ocena prawna',worst,f);
+}
+
+/* ── KEYBOARD ── */
+document.getElementById('urlInput').addEventListener('keydown',e=>{if(e.key==='Enter')startScan()});
+
+/* ── STRIPE PURCHASE ── */
+const STRIPE_LINK = 'https://buy.stripe.com/7sY14fePvdDhchD4esfAc09';
+
+function purchaseReport(){
+  localStorage.setItem('drstrona_pending', 'true');
+  window.location.href = STRIPE_LINK;
+}
+
+function checkPurchase(){
+  const pending = localStorage.getItem('drstrona_pending');
+  if(pending && window.location.search.includes('success')){
+    localStorage.removeItem('drstrona_pending');
+    localStorage.setItem('drstrona_unlocked', 'true');
+    unlockContent();
+  }
+  if(localStorage.getItem('drstrona_unlocked')==='true'){
+    unlockContent();
+  }
+}
+
+function unlockContent(){
+  const blur = document.getElementById('gatedBlur');
+  const overlay = document.getElementById('gateOverlay');
+  const locked = document.querySelector('.gate-locked');
+  if(blur) blur.classList.remove('gate-blur');
+  if(blur){ blur.style.maxHeight='none'; blur.style.opacity='1'; blur.style.pointerEvents='auto'; blur.style.userSelect='auto'; }
+  if(overlay) overlay.style.display='none';
+  if(locked) locked.style.display='none';
+  const form = document.getElementById('gateForm');
+  const success = document.getElementById('gateSuccess');
+  if(form) form.style.display='none';
+  if(success) success.style.display='block';
+}
+
+checkPurchase();
+
+function buildGood(d){
+  const g=[];
+  if(d.title) g.push(`Tytuł strony jest ustawiony`);
+  if(d.h1Count===1) g.push(`Jeden poprawny H1: "${(d.h1Text||'').substring(0,50)}"`);
+  if(d.hasPrivacy) g.push('Polityka prywatności dostępna i podlinkowana');
+  if(d.hasCookieBanner) g.push('Baner cookie jest zaimplementowany');
+  if(d.hasRobots) g.push('Plik robots.txt istnieje');
+  if(d.hasSchema) g.push(`Dane strukturalne Schema.org znalezione`);
+  if(d.hasSitemap) g.push('Sitemap.xml znaleziony');
+  if(d.hasLlms) g.push('Plik llms.txt jest dostępny');
+  if(d.mobileScore!=null&&d.mobileScore>=80) g.push(`Dobry wynik PageSpeed mobile: ${d.mobileScore}/100`);
+  if(d.canonical) g.push('Canonical URL ustawiony poprawnie');
+  if(d.hasTerms) g.push('Regulamin dostępny i podlinkowany');
+  if(d.formHasConsent) g.push('Formularz zawiera checkboxy zgody');
+  if(!g.length) return '';
+  return `<div class="section">
+    <div class="section-header">
+      <div class="sev-dot" style="background:var(--green)"></div>
+      <span class="section-title">Co działa dobrze</span>
+      <span class="section-sub">${g.length} elementów</span>
+    </div>
+    <div class="section-body" style="padding-top:4px">
+      ${g.map(x=>`<div class="ok-item"><div class="ok-icon">✓</div><span>${x}</span></div>`).join('')}
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>
