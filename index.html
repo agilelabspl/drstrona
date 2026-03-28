@@ -571,14 +571,14 @@ async function runAnalysis(url){
   R.h2Count=h2s.length;
   const imgs=[...doc.querySelectorAll('img')];
   R.totalImages=imgs.length;
-  R.imgsNoAlt=imgs.filter(i=>!i.getAttribute('alt')||i.getAttribute('alt').trim()==='').length;
+  R.imgsNoAlt=imgs.filter(i=>!i.hasAttribute('alt')).length;
   const forms=[...doc.querySelectorAll('form')];
   R.hasForms=forms.length>0;
   R.formHasConsent=forms.some(f=>f.querySelector('input[type="checkbox"]'));
   const links=[...doc.querySelectorAll('a')].map(a=>(a.textContent+' '+(a.getAttribute('href')||'')).toLowerCase());
   R.hasPrivacy=links.some(t=>t.includes('prywatno')||t.includes('privacy'));
   R.hasTerms=links.some(t=>t.includes('regulamin')||t.includes('terms'));
-  R.hasCookieBanner=html.includes('cookie')||html.includes('ciasteczk')||!!doc.querySelector('[class*="cookie"],[id*="cookie"],[class*="consent"],[id*="consent"]');
+  R.hasCookieBanner=!!doc.querySelector('[class*="cookie"],[id*="cookie"],[class*="consent"],[id*="consent"],[class*="gdpr"],[id*="gdpr"],[class*="rodo"],[id*="rodo"]')||html.includes('CookieConsent')||html.includes('cookieconsent')||html.includes('cookie-banner')||html.includes('cookie_banner')||html.includes('ciasteczk');
   R.hasGA=html.includes('google-analytics.com')||html.includes('gtag(');
   R.hasFB=html.includes('facebook.com/tr')||html.includes('fbq(');
   R.hasHotjar=html.includes('hotjar.com');
@@ -586,7 +586,7 @@ async function runAnalysis(url){
   showStep(3); await delay(200);
   try{
     const sc = await fetchViaProxy('https://'+domain+'/sitemap.xml');
-    R.hasSitemap=!!(sc&&(sc.includes('<urlset')||sc.includes('<sitemapindex')));
+    R.hasSitemap=!!(sc&&!sc.includes('<!doctype')&&(sc.includes('<urlset')||sc.includes('<sitemapindex')));
   }catch{R.hasSitemap=false;}
 
   showStep(4); await delay(200);
@@ -599,8 +599,24 @@ async function runAnalysis(url){
     const rt=rc||'';
     R.hasRobots=rt.length>5;
     const rtl=rt.toLowerCase();
-    R.gptBlocked=rtl.includes('gptbot')&&rtl.includes('disallow: /');
-    R.claudeBlocked=rtl.includes('claudebot')&&rtl.includes('disallow: /');
+    // parse robots.txt properly per user-agent blocks
+    function isBlockedInRobots(txt, botName){
+      const lines=txt.split('\n');
+      let inBlock=false;
+      for(const line of lines){
+        const l=line.trim().toLowerCase();
+        if(l.startsWith('user-agent:')){
+          const agent=l.replace('user-agent:','').trim();
+          inBlock=(agent===botName.toLowerCase()||agent==='*');
+        } else if(l.startsWith('disallow:')&&inBlock){
+          const path=l.replace('disallow:','').trim();
+          if(path==='/'||path==='/*') return true;
+        }
+      }
+      return false;
+    }
+    R.gptBlocked=isBlockedInRobots(rt,'gptbot');
+    R.claudeBlocked=isBlockedInRobots(rt,'claudebot');
     R.robotsSitemap=rtl.includes('sitemap:');
   }catch{R.hasRobots=false;R.gptBlocked=false;R.claudeBlocked=false;}
 
@@ -637,7 +653,7 @@ async function runAnalysis(url){
   // Indeksowanie: sitemap, robots
   if(!R.hasSitemap) indexScore-=40;
   if(!R.hasRobots) indexScore-=35;
-  if(!R.robotsSitemap) indexScore-=25;
+  if(R.hasRobots&&!R.robotsSitemap) indexScore-=25;
   // Struktura: schema, h1, alt
   if(!R.hasSchema) structScore-=35;
   if(R.h1Count===0) structScore-=30;
@@ -749,7 +765,7 @@ function renderReport(d,url){
       </div>
       <div id="gateOverlay" class="gate-overlay">
         <div class="gate-card">
-          <div class="gate-icon">🩺</div>
+          <div class="gate-icon">🚨</div>
           <h3>Odblokuj pełne wyniki i receptę</h3>
           <p>Odblokuj pełne wyniki badania i receptę co poprawić, żeby Twoja strona przyciągała więcej klientów.</p>
           <div id="gateForm">
@@ -822,7 +838,7 @@ function buildStructure(d){
   if(d.h1Count===0) f.push({s:'red',t:'Brak nagłówka H1',src:'html',w:'H1 to najważniejszy nagłówek strony. Mówi Google i użytkownikom o czym jest ta strona. Jego brak osłabia widoczność.',fix:'Dodaj jeden H1 z główną frazą opisującą Twoją działalność.'});
   else if(d.h1Count>1) f.push({s:'amber',t:`Za dużo nagłówków H1 (${d.h1Count})`,src:'html',w:'Na stronie powinien być dokładnie jeden H1. Wiele H1 dezorientuje wyszukiwarki.',fix:'Zostaw jeden H1, pozostałe zamień na H2.'});
   else f.push({s:'green',t:`Nagłówek H1 poprawny: "${(d.h1Text||'').substring(0,50)}"`,src:'html',w:'Strona ma jeden, jasny nagłówek główny.',fix:null});
-  if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez opisu`,src:'html',w:'Obrazki bez opisu (alt text) są niewidoczne dla Google Images i czytników ekranu. Tracisz dodatkowe źródło ruchu.',fix:'Dodaj krótki opis do każdego obrazka w ustawieniach CMS.'});
+  if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez atrybutu alt`,src:'html',w:'Obrazki bez atrybutu alt są niewidoczne dla Google Images i czytników ekranu. Jeśli obrazek jest dekoracyjny, dodaj pusty alt="". Jeśli informacyjny, opisz co przedstawia.',fix:'Dodaj atrybut alt do każdego obrazka w ustawieniach CMS.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f);
 }
@@ -846,7 +862,7 @@ function buildAI(d){
   const f=[];
   if(!d.hasLlms) f.push({s:'amber',t:'Brak pliku llms.txt',src:'html',w:'llms.txt to nowy standard który mówi asystentom AI (ChatGPT, Claude, Perplexity) które strony są najważniejsze na Twoim serwisie. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz /llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org — 15 minut roboty.'});
   else f.push({s:'green',t:'Plik llms.txt znaleziony',src:'html',w:'Asystenty AI mogą odczytać strukturę i najważniejsze treści serwisu.',fix:null});
-  if(d.gptBlocked) f.push({s:'amber',t:'GPTBot (ChatGPT) ma zablokowany dostęp',src:'html',w:'Plik robots.txt zawiera blokadę dla GPTBot. Gdy ktoś pyta ChatGPT o Twoją branżę — Twoja strona nie może być uwzględniona.',fix:'Jeśli chcesz być widoczny w AI: usuń blokadę GPTBot. Jeśli nie chcesz żeby AI trenowało na treściach — zostaw.'});
+  if(d.gptBlocked) f.push({s:'amber',t:'GPTBot (ChatGPT) ma zablokowany dostęp',src:'html',w:'Plik robots.txt blokuje GPTBot (bota ChatGPT). Gdy ktoś pyta ChatGPT o Twoją branżę, Twoja strona nie może być uwzględniona w odpowiedzi.',fix:'Jeśli chcesz być widoczny w AI: usuń blokadę GPTBot. Jeśli nie chcesz żeby AI trenowało na treściach, zostaw.'});
   if(!d.hasSchema) f.push({s:'amber',t:'Brak Schema.org — AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenty AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj Organization lub LocalBusiness JSON-LD do strony głównej.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f);
