@@ -595,9 +595,18 @@ async function runAnalysis(url){
   // word count
   const bodyText=doc.body?.textContent||'';
   R.wordCount=bodyText.split(/\s+/).filter(w=>w.length>1).length;
-  // CTA detection
-  const allBtns=[...doc.querySelectorAll('button,a[class*="btn"],a[class*="cta"],input[type="submit"],.btn,.button,[role="button"]')];
-  R.ctaCount=allBtns.length;
+  // CTA detection — only count meaningful action buttons
+  const ctaKeywords=['kontakt','zamów','kup','zapisz','wyślij','umów','sprawdź','pobierz','ofert','cennik','demo','trial','start','zacznij','dołącz','zadzwoń','napisz','skontaktuj','dowiedz','więcej','zobacz'];
+  const allBtns=[...doc.querySelectorAll('button,a[class*="btn"],a[class*="cta"],input[type="submit"]')];
+  const realCTAs=allBtns.filter(el=>{
+    const txt=(el.textContent||'').toLowerCase().trim();
+    const cls=(el.className||'').toLowerCase();
+    // skip cookie/nav/utility buttons
+    if(cls.includes('cookie')||cls.includes('consent')||cls.includes('close')||cls.includes('menu')||cls.includes('nav')) return false;
+    if(txt.length<2||txt.length>60) return false;
+    return ctaKeywords.some(k=>txt.includes(k))||cls.includes('cta')||cls.includes('primary');
+  });
+  R.ctaCount=realCTAs.length;
   R.hasCTA=R.ctaCount>0;
   // contact info
   const bodyLower=bodyText.toLowerCase();
@@ -663,17 +672,32 @@ async function runAnalysis(url){
     // parse robots.txt properly per user-agent blocks
     function isBlockedInRobots(txt, botName){
       const lines=txt.split('\n');
-      let inBlock=false;
+      const bot=botName.toLowerCase();
+      let specificBlock=null, wildcardBlock=null;
+      let currentAgent=null;
       for(const line of lines){
         const l=line.trim().toLowerCase();
         if(l.startsWith('user-agent:')){
-          const agent=l.replace('user-agent:','').trim();
-          inBlock=(agent===botName.toLowerCase()||agent==='*');
-        } else if(l.startsWith('disallow:')&&inBlock){
-          const path=l.replace('disallow:','').trim();
-          if(path==='/'||path==='/*') return true;
+          currentAgent=l.replace('user-agent:','').trim();
+        } else if(currentAgent){
+          if(l.startsWith('disallow:')){
+            const path=l.replace('disallow:','').trim();
+            if(path==='/'||path==='/*'){
+              if(currentAgent===bot) specificBlock='blocked';
+              else if(currentAgent==='*'&&specificBlock===null) wildcardBlock='blocked';
+            }
+          } else if(l.startsWith('allow:')){
+            const path=l.replace('allow:','').trim();
+            if(path==='/'||path==='/*'){
+              if(currentAgent===bot) specificBlock='allowed';
+              else if(currentAgent==='*'&&specificBlock===null) wildcardBlock='allowed';
+            }
+          }
         }
       }
+      // specific rules for bot take precedence over wildcard
+      if(specificBlock!==null) return specificBlock==='blocked';
+      if(wildcardBlock!==null) return wildcardBlock==='blocked';
       return false;
     }
     R.gptBlocked=isBlockedInRobots(rt,'gptbot');
@@ -742,7 +766,9 @@ async function runAnalysis(url){
   const _sc = id => document.getElementById(id);
   const _cv = (el,v) => { el.textContent=v; el.style.color=scoreColor(v); };
   _cv(_sc('m-seo'), R.seoScore);
-  _cv(_sc('m-speed'), R.speedScore!=null?R.speedScore:'?');
+  const spEl=_sc('m-speed');
+  if(R.speedScore!=null){ _cv(spEl, R.speedScore); }
+  else { spEl.textContent='?'; spEl.style.color='var(--ink3)'; }
   _cv(_sc('m-ai'), R.aiScore);
   _cv(_sc('m-index'), R.indexScore);
   _cv(_sc('m-struct'), R.structScore);
@@ -846,7 +872,7 @@ function renderReport(d,url){
     </div>
 
     <div class="disclaimer">
-      Analiza wykonana automatycznie na podstawie HTML strony głównej i Google PageSpeed Insights API (dane Lighthouse w czasie rzeczywistym). HTML pobierany przez publiczne proxy — możliwe opóźnienia lub braki dla stron z agresywnym blokowaniem botów. Nie sprawdzano: certyfikatu SSL, trackerów JS wymagających wykonania skryptów, kontrastu kolorów, dostępności elementów dynamicznych. Sub-score'y (SEO, AI, Prywatność) są uproszczonymi wskaźnikami opartymi na wykrytych sygnałach — nie stanowią audytu prawnego ani pełnej oceny zgodności.
+      <strong>Jak działa badanie:</strong> Analizujemy kod HTML Twojej strony głównej oraz pobieramy dane z Google PageSpeed Insights API (w czasie rzeczywistym). Elementy ładowane wyłącznie przez JavaScript (np. baner cookie, treści dynamiczne) mogą nie być widoczne w naszej analizie. Szybkość strony mierzy Google Lighthouse. Wyniki i oceny punktowe są wskaźnikami orientacyjnymi. Badanie nie zastępuje audytu prawnego, pełnej analizy bezpieczeństwa ani eksperckiego audytu SEO.
     </div>`;
 
   el.scrollIntoView({behavior:'smooth'});
