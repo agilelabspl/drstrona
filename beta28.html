@@ -528,6 +528,13 @@ async function startScan(){
 
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
+function isErrorPage(html){
+  const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
+  if(!m) return false;
+  const t = m[1].toLowerCase().trim();
+  return /^(4\d\d|5\d\d)\b/.test(t) || ['forbidden','not found','access denied','error','unauthorized','bad gateway','service unavailable'].some(e=>t.includes(e));
+}
+
 async function fetchViaProxy(targetUrl){
   const proxies = [
     { url: u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, type:'json' },
@@ -544,10 +551,11 @@ async function fetchViaProxy(targetUrl){
       if(!res.ok) continue;
       if(proxy.type==='json'){
         const j = await res.json();
-        if(j?.contents?.length > 50) return j.contents;
+        if(j?.status_code && j.status_code>=400) continue;
+        if(j?.contents?.length > 50 && !isErrorPage(j.contents)) return j.contents;
       } else {
         const t = await res.text();
-        if(t?.length > 50 && !t.includes('<title>Error</title>')) return t;
+        if(t?.length > 50 && !isErrorPage(t)) return t;
       }
     }catch(e){ continue; }
   }
