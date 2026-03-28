@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dr.Strona — zbadaj zdrowie swojej strony</title>
-<meta name="description" content="Zbadaj 6 obszarów swojej strony w 30 sekund. SEO, szybkość, AI Ready (GEO), indeksowanie, struktura, RODO. Dowiedz się co poprawić.">
+<meta name="description" content="Zbadaj 6 obszarów swojej strony w 59 sekund. SEO, szybkość, AI Ready (GEO), indeksowanie, struktura, RODO. Dowiedz się co poprawić.">
 <link rel="icon" href="favicon.svg">
 <link rel="canonical" href="https://www.drstrona.pl/">
 <meta property="og:title" content="Dr.Strona — zbadaj zdrowie swojej strony">
-<meta property="og:description" content="Zbadaj 6 obszarów swojej strony w 30 sekund. Dowiedz się co blokuje Twój ruch, widoczność i konwersje.">
+<meta property="og:description" content="Zbadaj 6 obszarów swojej strony w 59 sekund. Dowiedz się co blokuje Twój ruch, widoczność i konwersje.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.drstrona.pl/">
 <meta name="twitter:card" content="summary">
@@ -291,12 +291,12 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
 <div class="hero">
   <div class="hero-eyebrow">
     <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block"></span>
-    Wyniki zdrowia Twojej strony w 30 sekund
+    Wyniki zdrowia Twojej strony w 59 sekund
   </div>
 
   <h1>Czy Twoja strona<br><em>naprawdę żyje?</em></h1>
 
-  <p class="hero-sub">Zbadaj 6 obszarów swojej strony w 30 sekund.<br>Dowiedz się co blokuje Twój ruch, widoczność i konwersje.</p>
+  <p class="hero-sub">Zbadaj 6 obszarów swojej strony w 59 sekund.<br>Dowiedz się co blokuje Twój ruch, widoczność i konwersje.</p>
 
   <div class="ekg-wrap">
     <div class="ekg-label">
@@ -826,8 +826,8 @@ function buildSEO(d){
   const f=[];
   if(!d.title) f.push({s:'red',t:'Brak tytułu strony',src:'html',w:'Google nie wie jak opisać Twoją stronę. Brak tytułu to jeden z najbardziej podstawowych błędów SEO.',fix:'Dodaj <title> w sekcji <head>, np. "Nazwa firmy. Co robisz, dla kogo, gdzie".'});
   else if(d.title.length>65) f.push({s:'amber',t:`Tytuł za długi (${d.title.length} znaków)`,src:'html',w:'Google obcina tytuły po ok. 60 znakach. Twój tytuł może być urwany w wynikach.',fix:'Skróć tytuł do maks. 60 znaków. Najważniejsze informacje na początku.'});
-  if(!d.metaDesc) f.push({s:'red',t:'Brak meta description',src:'html',w:'Google sam wybierze losowy fragment tekstu do wyświetlenia w wynikach zamiast zachęcającego opisu. Tracisz kontrolę nad pierwszym wrażeniem.',fix:'Dodaj meta description (150-160 znaków): co robisz, dla kogo, jaka korzyść.'});
-  if(!d.canonical) f.push({s:'amber',t:'Brak canonical URL',src:'html',w:'Bez canonical Google może traktować różne wersje adresu (z www, bez www, z ukośnikiem) jako osobne strony. To rozprasza "siłę SEO".',fix:'Dodaj <link rel="canonical"> wskazujący na główny adres strony.'});
+  if(!d.metaDesc) f.push({s:'red',t:'Brak opisu strony dla Google',src:'html',w:'Google sam wybierze losowy fragment tekstu do wyświetlenia w wynikach zamiast zachęcającego opisu. Tracisz kontrolę nad pierwszym wrażeniem.',fix:'Dodaj meta description (150-160 znaków): co robisz, dla kogo, jaka korzyść.'});
+  if(!d.canonical) f.push({s:'amber',t:'Nie wskazano głównego adresu strony',src:'html',w:'Bez wskazania głównego adresu (canonical) Google może traktować różne wersje URL (z www, bez www, z ukośnikiem) jako osobne strony. To rozprasza "siłę SEO".',fix:'Dodaj canonical URL wskazujący na główny adres strony.'});
   if(!f.length) f.push({s:'green',t:'SEO podstawy wyglądają dobrze',src:'html',w:'Tytuł, opis i canonical są na miejscu.',fix:null});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   return sec('SEO',d.title?`"${d.title.substring(0,50)}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f);
@@ -835,25 +835,25 @@ function buildSEO(d){
 
 function buildIndex(d){
   const f=[];
-  if(d.sitemapStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić sitemap.xml',src:'html',w:'Nasz serwer nie mógł pobrać pliku sitemap.xml. To nie oznacza że go nie ma. Sprawdź ręcznie wpisując w przeglądarkę: '+d.domain+'/sitemap.xml',fix:null});
-  else if(!d.hasSitemap) f.push({s:'red',t:'Brak sitemap.xml',src:'html',w:'Google nie ma listy Twoich podstron. Może nie indeksować regularnie całej witryny, szczególnie nowych treści.',fix:'Wygeneruj sitemap.xml i zgłoś w Google Search Console. WordPress: wtyczka Yoast lub RankMath.'});
-  else f.push({s:'green',t:'Sitemap.xml znaleziony',src:'html',w:'Google ma dostęp do listy Twoich podstron.',fix:null});
-  if(d.robotsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić robots.txt',src:'html',w:'Nasz serwer nie mógł pobrać pliku robots.txt. Sprawdź ręcznie: '+d.domain+'/robots.txt',fix:null});
-  else if(!d.hasRobots) f.push({s:'amber',t:'Brak pliku robots.txt',src:'html',w:'Robots.txt mówi wyszukiwarkom które strony mogą odwiedzać. Bez niego Google indeksuje wszystko, w tym strony które może nie powinny być widoczne.',fix:'Stwórz plik robots.txt w głównym katalogu strony.'});
-  else f.push({s:'green',t:'Robots.txt znaleziony',src:'html',w:'Wyszukiwarki wiedzą co mogą indeksować.',fix:null});
-  if(d.hasRobots&&!d.robotsSitemap) f.push({s:'amber',t:'Robots.txt nie linkuje do sitemap',src:'html',w:'Warto dodać odnośnik do sitemap.xml w pliku robots.txt. Ułatwia to wyszukiwarkom znalezienie pełnej listy podstron.',fix:'Dodaj linię "Sitemap: https://twoja-domena.pl/sitemap.xml" w robots.txt.'});
+  if(d.sitemapStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić mapy strony',src:'html',w:'Nasz serwer nie mógł pobrać pliku sitemap.xml. To nie oznacza że go nie ma. Sprawdź ręcznie wpisując w przeglądarkę: '+d.domain+'/sitemap.xml',fix:null});
+  else if(!d.hasSitemap) f.push({s:'red',t:'Brak mapy strony dla Google',src:'html',w:'Google nie ma listy Twoich podstron. Może nie indeksować regularnie całej witryny, szczególnie nowych treści.',fix:'Wygeneruj plik sitemap.xml i zgłoś go w Google Search Console. WordPress: wtyczka Yoast lub RankMath.'});
+  else f.push({s:'green',t:'Mapa strony znaleziona',src:'html',w:'Google ma dostęp do listy Twoich podstron.',fix:null});
+  if(d.robotsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić instrukcji dla wyszukiwarek',src:'html',w:'Nasz serwer nie mógł pobrać pliku robots.txt. Sprawdź ręcznie: '+d.domain+'/robots.txt',fix:null});
+  else if(!d.hasRobots) f.push({s:'amber',t:'Brak instrukcji dla wyszukiwarek',src:'html',w:'Plik robots.txt mówi wyszukiwarkom które strony mogą odwiedzać. Bez niego Google indeksuje wszystko, w tym strony które może nie powinny być widoczne.',fix:'Stwórz plik robots.txt w głównym katalogu strony.'});
+  else f.push({s:'green',t:'Instrukcje dla wyszukiwarek znalezione',src:'html',w:'Wyszukiwarki wiedzą co mogą indeksować.',fix:null});
+  if(d.hasRobots&&!d.robotsSitemap) f.push({s:'amber',t:'Instrukcje nie linkują do mapy strony',src:'html',w:'Warto dodać odnośnik do mapy strony w pliku robots.txt. Ułatwia to wyszukiwarkom znalezienie pełnej listy podstron.',fix:'Dodaj linię "Sitemap: https://twoja-domena.pl/sitemap.xml" w robots.txt.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   return sec('Indeksowanie','Czy Google widzi Twoje podstrony',worst,f);
 }
 
 function buildStructure(d){
   const f=[];
-  if(!d.hasSchema) f.push({s:'amber',t:'Brak danych strukturalnych',src:'html',w:'Google i asystenci AI nie wiedzą czym jest Twoja firma, co oferujesz i gdzie jesteś. Tracisz "rich results" (gwiazdki, FAQ, logo) w wynikach wyszukiwania.',fix:'Dodaj JSON-LD z danymi Organization lub LocalBusiness.'});
-  else f.push({s:'green',t:'Dane strukturalne znalezione',src:'html',w:'Google rozumie strukturę Twojej strony.',fix:null});
-  if(d.h1Count===0) f.push({s:'red',t:'Brak nagłówka H1',src:'html',w:'H1 to najważniejszy nagłówek strony. Mówi Google i użytkownikom o czym jest ta strona. Jego brak osłabia widoczność.',fix:'Dodaj jeden H1 z główną frazą opisującą Twoją działalność.'});
-  else if(d.h1Count>1) f.push({s:'amber',t:`Za dużo nagłówków H1 (${d.h1Count})`,src:'html',w:'Na stronie powinien być dokładnie jeden H1. Wiele H1 dezorientuje wyszukiwarki.',fix:'Zostaw jeden H1, pozostałe zamień na H2.'});
-  else f.push({s:'green',t:`Nagłówek H1 poprawny: "${(d.h1Text||'').substring(0,50)}"`,src:'html',w:'Strona ma jeden, jasny nagłówek główny.',fix:null});
-  if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez atrybutu alt`,src:'html',w:'Obrazki bez atrybutu alt są niewidoczne dla Google Images i czytników ekranu. Jeśli obrazek jest dekoracyjny, dodaj pusty alt="". Jeśli informacyjny, opisz co przedstawia.',fix:'Dodaj atrybut alt do każdego obrazka w ustawieniach CMS.'});
+  if(!d.hasSchema) f.push({s:'amber',t:'Google nie rozumie czym się zajmujesz',src:'html',w:'Brak danych strukturalnych. Google i asystenci AI nie wiedzą czym jest Twoja firma, co oferujesz i gdzie jesteś. Tracisz "rich results" (gwiazdki, FAQ, logo) w wynikach wyszukiwania.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony.'});
+  else f.push({s:'green',t:'Google rozumie czym się zajmujesz',src:'html',w:'Dane strukturalne są na miejscu. Wyszukiwarki i AI wiedzą czym jest Twoja firma.',fix:null});
+  if(d.h1Count===0) f.push({s:'red',t:'Strona nie ma głównego nagłówka',src:'html',w:'Główny nagłówek (H1) mówi Google i użytkownikom o czym jest ta strona. Jego brak osłabia widoczność w wyszukiwarce.',fix:'Dodaj jeden główny nagłówek z frazą opisującą Twoją działalność.'});
+  else if(d.h1Count>1) f.push({s:'amber',t:`Za dużo głównych nagłówków (${d.h1Count})`,src:'html',w:'Na stronie powinien być dokładnie jeden główny nagłówek. Wiele nagłówków H1 dezorientuje wyszukiwarki.',fix:'Zostaw jeden główny nagłówek, pozostałe zamień na podtytuły.'});
+  else f.push({s:'green',t:`Główny nagłówek poprawny: "${(d.h1Text||'').substring(0,50)}"`,src:'html',w:'Strona ma jeden, jasny nagłówek główny.',fix:null});
+  if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez opisu`,src:'html',w:'Obrazki bez opisu są niewidoczne dla Google Images i czytników ekranu (używanych przez osoby niewidome). Tracisz dodatkowe źródło ruchu z wyszukiwarki grafik.',fix:'Dodaj opis (alt) do każdego obrazka w ustawieniach CMS.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f);
 }
@@ -875,11 +875,11 @@ function buildSpeed(d){
 
 function buildAI(d){
   const f=[];
-  if(d.llmsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić llms.txt',src:'html',w:'Nasz serwer nie mógł pobrać pliku llms.txt. Sprawdź ręcznie: '+d.domain+'/llms.txt',fix:null});
-  else if(!d.hasLlms) f.push({s:'amber',t:'Brak pliku llms.txt',src:'html',w:'llms.txt to nowy standard który mówi asystentom AI (ChatGPT, Claude, Perplexity) które strony są najważniejsze na Twoim serwisie. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz /llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org, 15 minut roboty.'});
-  else f.push({s:'green',t:'Plik llms.txt znaleziony',src:'html',w:'Asystenty AI mogą odczytać strukturę i najważniejsze treści serwisu.',fix:null});
+  if(d.llmsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić widoczności dla AI',src:'html',w:'Nasz serwer nie mógł pobrać pliku llms.txt. Sprawdź ręcznie: '+d.domain+'/llms.txt',fix:null});
+  else if(!d.hasLlms) f.push({s:'amber',t:'Asystenty AI nie mają przewodnika po Twojej stronie',src:'html',w:'Plik llms.txt to nowy standard, który mówi asystentom AI (ChatGPT, Claude, Perplexity) które treści na Twojej stronie są najważniejsze. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz plik llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org, 15 minut roboty.'});
+  else f.push({s:'green',t:'Przewodnik dla AI znaleziony (llms.txt)',src:'html',w:'Asystenty AI mogą odczytać strukturę i najważniejsze treści serwisu.',fix:null});
   if(d.gptBlocked) f.push({s:'amber',t:'GPTBot (ChatGPT) ma zablokowany dostęp',src:'html',w:'Plik robots.txt blokuje GPTBot (bota ChatGPT). Gdy ktoś pyta ChatGPT o Twoją branżę, Twoja strona nie może być uwzględniona w odpowiedzi.',fix:'Jeśli chcesz być widoczny w AI: usuń blokadę GPTBot. Jeśli nie chcesz żeby AI trenowało na treściach, zostaw.'});
-  if(!d.hasSchema) f.push({s:'amber',t:'Brak Schema.org — AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenty AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj Organization lub LocalBusiness JSON-LD do strony głównej.'});
+  if(!d.hasSchema) f.push({s:'amber',t:'AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenty AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony głównej.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f);
 }
