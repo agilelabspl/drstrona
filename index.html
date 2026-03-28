@@ -787,6 +787,11 @@ function renderReport(d,url){
     </div>`;
 
   el.scrollIntoView({behavior:'smooth'});
+
+  // unlock if already purchased
+  if(localStorage.getItem('drstrona_unlocked')==='true'){
+    unlockContent();
+  }
 }
 
 function sec(title,sub,dotColor,findings){
