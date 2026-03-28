@@ -353,7 +353,7 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
     <span class="check-pill">Indeksowanie</span>
     <span class="check-pill">Struktura techniczna</span>
     <span class="check-pill">RODO i prywatność</span>
-    <span class="check-pill">UX i wiarygodność</span>
+    <span class="check-pill">UX i wiarygodność 🎁</span>
   </div>
 </div>
 
@@ -528,6 +528,13 @@ async function startScan(){
 
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
+function isErrorPage(html){
+  const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
+  if(!m) return false;
+  const t = m[1].toLowerCase().trim();
+  return /^(4\d\d|5\d\d)\b/.test(t) || ['forbidden','not found','access denied','error','unauthorized','bad gateway','service unavailable'].some(e=>t.includes(e));
+}
+
 async function fetchViaProxy(targetUrl){
   const proxies = [
     { url: u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, type:'json' },
@@ -544,10 +551,11 @@ async function fetchViaProxy(targetUrl){
       if(!res.ok) continue;
       if(proxy.type==='json'){
         const j = await res.json();
-        if(j?.contents?.length > 50) return j.contents;
+        if(j?.status_code && j.status_code>=400) continue;
+        if(j?.contents?.length > 50 && !isErrorPage(j.contents)) return j.contents;
       } else {
         const t = await res.text();
-        if(t?.length > 50 && !t.includes('<title>Error</title>')) return t;
+        if(t?.length > 50 && !isErrorPage(t)) return t;
       }
     }catch(e){ continue; }
   }
@@ -803,7 +811,7 @@ function renderReport(d,url){
     <div class="report-header">
       <div class="report-url">${d.url} · ${d.ts}</div>
       <div class="report-title">Wyniki zdrowia Twojej strony</div>
-      <div class="report-intro">Zbadaliśmy 7 ważnych obszarów Twojej strony. Zapoznaj się z wynikami i receptą.</div>
+      <div class="report-intro">Zbadaliśmy 6 obszarów (+1 bonusowy) Twojej strony. Zapoznaj się z wynikami i receptą.</div>
       <div class="report-meta">Analiza HTML + Google PageSpeed API · strona główna</div>
     </div>
 
@@ -990,13 +998,10 @@ function buildSpeed(d){
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(d.mobileScore!=null?d.mobileScore>=80:null, 'Szybkość na telefonie (PageSpeed mobile)', d.mobileScore!=null?d.mobileScore+'/100':null),
-    chk(d.lcp?parseFloat(d.lcp)<=2.5:null, 'Czas do głównej treści (LCP)', d.lcp||'brak danych'),
-    chk(d.cls?parseFloat(d.cls)<=0.1:null, 'Stabilność layoutu (CLS)', d.cls||'brak danych'),
-    chk(d.fcp?parseFloat(d.fcp)<=1.8:null, 'Pierwsze wyświetlenie (FCP)', d.fcp||'brak danych'),
-    chk(d.tbt?parseFloat(d.tbt)<=200:null, 'Blokowanie interakcji (TBT)', d.tbt||'brak danych'),
-    chk(d.totalImages>0?d.imgsNoAlt===0:true, 'Obrazki z opisem (alt text)', d.totalImages>0?d.imgsNoAlt+' z '+d.totalImages+' bez opisu':'brak obrazków'),
-    chk(!!d.hasViewport, 'Dostosowanie do ekranu telefonu (viewport)'),
-    chk(!!d.hasFavicon, 'Ikona strony w przeglądarce (favicon)'),
+    chk(d.lcp?parseFloat(d.lcp)<=2.5:null, 'Czas do głównej treści (Largest Contentful Paint)', d.lcp||'brak danych'),
+    chk(d.cls?parseFloat(d.cls)<=0.1:null, 'Stabilność layoutu (Cumulative Layout Shift)', d.cls||'brak danych'),
+    chk(d.fcp?parseFloat(d.fcp)<=1.8:null, 'Pierwsze wyświetlenie (First Contentful Paint)', d.fcp||'brak danych'),
+    chk(d.tbt?parseFloat(d.tbt)<=200:null, 'Blokowanie interakcji (Total Blocking Time)', d.tbt||'brak danych'),
   ]);
   return sec('Szybkość strony',d.lcp?`LCP: ${d.lcp}${d.cls?' · CLS: '+d.cls:''}`:d.mobileScore!=null?`Score: ${d.mobileScore}/100`:'Google PageSpeed',worst,f,cl);
 }
@@ -1038,7 +1043,6 @@ function buildPrivacy(d){
     chk(d.hasPrivacy?true:d.wordCount>0?false:null, 'Link do polityki prywatności', !d.hasPrivacy&&d.wordCount===0?'nie udało się w pełni przeanalizować strony':null),
     chk(d.hasTerms?true:d.wordCount>0?false:null, 'Link do regulaminu', !d.hasTerms&&d.wordCount===0?'nie udało się w pełni przeanalizować strony':null),
     chk(!!d.hasCookieBanner, 'Baner cookie / zgoda na śledzenie'),
-    chk(d.isHttps, 'Bezpieczne połączenie (HTTPS)'),
     ...(d.hasGA?[chk(d.hasCookieBanner, 'Google Analytics za zgodą użytkownika', 'GA wykryte na stronie')]:[]),
     ...(d.hasFB?[chk(d.hasCookieBanner, 'Facebook Pixel za zgodą użytkownika', 'Pixel wykryty na stronie')]:[]),
     ...(d.hasHotjar?[chk(d.hasCookieBanner, 'Hotjar za zgodą użytkownika', 'Hotjar wykryty na stronie')]:[]),
@@ -1105,7 +1109,7 @@ function buildUX(d){
     chk(d.hasAbout, 'Strona "O nas" / "O firmie"'),
     chk(d.hasViewport, 'Strona działa na telefonie (responsywna)'),
   ]);
-  return sec('UX i wiarygodność','Czy klient Ci zaufa i skontaktuje się',worst,f,cl);
+  return sec('🎁 UX i wiarygodność (bonus)','Czy klient Ci zaufa i skontaktuje się',worst,f,cl);
 }
 
 function buildGood(d){
