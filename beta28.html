@@ -595,6 +595,7 @@ async function runAnalysis(url){
   // word count
   const bodyText=doc.body?.textContent||'';
   R.wordCount=bodyText.split(/\s+/).filter(w=>w.length>1).length;
+  R.htmlLength=html.length;
   // CTA detection — only count meaningful action buttons
   const ctaKeywords=['kontakt','zamów','kup','zapisz','wyślij','umów','sprawdź','pobierz','ofert','cennik','demo','trial','start','zacznij','dołącz','zadzwoń','napisz','skontaktuj','dowiedz','więcej','zobacz'];
   const allBtns=[...doc.querySelectorAll('button,a[class*="btn"],a[class*="cta"],input[type="submit"]')];
@@ -882,7 +883,7 @@ function sec(title,sub,dotColor,findings,checklistHtml){
         <div>
           <div class="finding-title">${f.t}<span class="tag tag-${f.src}">${f.src==='live'?'live API':'HTML'}</span></div>
           <div class="finding-why">${f.w}</div>
-          ${f.fix?`<div class="finding-fix"><span class="fix-label">Recepta:</span>${f.fix}</div>`:''}
+          ${f.fix?`<div class="finding-fix"><span class="fix-label">Recepta: </span>${f.fix}</div>`:''}
         </div>
       </div>`).join('')}
       ${checklistHtml||''}
@@ -906,7 +907,7 @@ function buildSEO(d){
     chk(d.h2Count>0, 'Podtytuły na stronie (H2)', d.h2Count+' znalezionych'),
     chk(!!d.hasOG, 'Podgląd w social media (Open Graph)', d.ogImage?'Obrazek podglądu: tak':'Brak obrazka podglądu'),
     chk(!!d.lang, 'Język strony ustawiony', d.lang?'Język: '+d.lang:null),
-    chk(d.wordCount>200, 'Wystarczająca ilość treści', d.wordCount+' słów'+(d.wordCount<200?' (mało, Google preferuje min. 300)':'')),
+    chk(d.wordCount>0?(d.wordCount>200):null, 'Wystarczająca ilość treści', d.wordCount>0?d.wordCount+' słów'+(d.wordCount<200?' (mało, Google preferuje min. 300)':''):'treść ładowana przez JavaScript'),
   ]);
   return sec('SEO',d.title?`"${d.title.substring(0,50)}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f,cl);
 }
@@ -990,7 +991,7 @@ function buildAI(d){
     chk(d.robotsStatus==='found'?!d.claudeBlocked:null, 'Claude może czytać stronę (ClaudeBot)', d.robotsStatus!=='found'?'nie udało się sprawdzić robots.txt':d.claudeBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
     chk(d.robotsStatus==='found'?!d.perplexityBlocked:null, 'Perplexity może czytać stronę (PerplexityBot)', d.robotsStatus!=='found'?'nie udało się sprawdzić robots.txt':d.perplexityBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
     chk(!!d.hasSchema, 'Dane strukturalne dla AI (Schema.org)'),
-    chk(d.wordCount>200, 'Wystarczająca treść tekstowa dla AI', d.wordCount+' słów'),
+    chk(d.wordCount>0?(d.wordCount>200):null, 'Wystarczająca treść tekstowa dla AI', d.wordCount>0?d.wordCount+' słów':'treść ładowana przez JavaScript'),
   ]);
   return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f,cl);
 }
@@ -1010,8 +1011,8 @@ function buildPrivacy(d){
   if(d.hasForms&&!d.formHasConsent) f.push({s:'amber',t:'Formularz bez widocznego checkboxa zgody',src:'html',w:'Jeśli formularz zbiera dane do marketingu, wymagana jest oddzielna zgoda użytkownika.',fix:'Dodaj checkbox z tekstem zgody marketingowej oddzielony od zgody na regulamin.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
-    chk(!!d.hasPrivacy, 'Link do polityki prywatności'),
-    chk(!!d.hasTerms, 'Link do regulaminu'),
+    chk(d.hasPrivacy?true:d.wordCount>0?false:null, 'Link do polityki prywatności', !d.hasPrivacy&&d.wordCount===0?'nie udało się w pełni przeanalizować strony':null),
+    chk(d.hasTerms?true:d.wordCount>0?false:null, 'Link do regulaminu', !d.hasTerms&&d.wordCount===0?'nie udało się w pełni przeanalizować strony':null),
     chk(!!d.hasCookieBanner, 'Baner cookie / zgoda na śledzenie'),
     chk(d.isHttps, 'Bezpieczne połączenie (HTTPS)'),
     ...(d.hasGA?[chk(d.hasCookieBanner, 'Google Analytics za zgodą użytkownika', 'GA wykryte na stronie')]:[]),
