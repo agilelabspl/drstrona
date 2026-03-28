@@ -586,18 +586,26 @@ async function runAnalysis(url){
   showStep(3); await delay(200);
   try{
     const sc = await fetchViaProxy('https://'+domain+'/sitemap.xml');
-    R.hasSitemap=!!(sc&&!sc.includes('<!doctype')&&(sc.includes('<urlset')||sc.includes('<sitemapindex')));
-  }catch{R.hasSitemap=false;}
+    if(sc===null) R.sitemapStatus='unknown';
+    else if(sc&&!sc.includes('<!doctype')&&(sc.includes('<urlset')||sc.includes('<sitemapindex'))) R.sitemapStatus='found';
+    else R.sitemapStatus='missing';
+  }catch{R.sitemapStatus='unknown';}
+  R.hasSitemap=R.sitemapStatus==='found';
 
   showStep(4); await delay(200);
   try{
     const lc = await fetchViaProxy('https://'+domain+'/llms.txt');
-    R.hasLlms=!!(lc&&lc.length>20&&!lc.toLowerCase().includes('not found')&&!lc.includes('<!doctype')&&!lc.includes('<html'));
-  }catch{R.hasLlms=false;}
+    if(lc===null) R.llmsStatus='unknown';
+    else if(lc&&lc.length>20&&!lc.toLowerCase().includes('not found')&&!lc.includes('<!doctype')&&!lc.includes('<html')) R.llmsStatus='found';
+    else R.llmsStatus='missing';
+  }catch{R.llmsStatus='unknown';}
+  R.hasLlms=R.llmsStatus==='found';
   try{
     const rc = await fetchViaProxy('https://'+domain+'/robots.txt');
+    if(rc===null) R.robotsStatus='unknown';
+    else { R.robotsStatus=rc.length>5?'found':'missing'; }
     const rt=rc||'';
-    R.hasRobots=rt.length>5;
+    R.hasRobots=R.robotsStatus==='found';
     const rtl=rt.toLowerCase();
     // parse robots.txt properly per user-agent blocks
     function isBlockedInRobots(txt, botName){
@@ -651,8 +659,8 @@ async function runAnalysis(url){
   if(!R.metaDesc) seoScore-=35;
   if(!R.canonical) seoScore-=30;
   // Indeksowanie: sitemap, robots
-  if(!R.hasSitemap) indexScore-=40;
-  if(!R.hasRobots) indexScore-=35;
+  if(R.sitemapStatus==='missing') indexScore-=40;
+  if(R.robotsStatus==='missing') indexScore-=35;
   if(R.hasRobots&&!R.robotsSitemap) indexScore-=25;
   // Struktura: schema, h1, alt
   if(!R.hasSchema) structScore-=35;
@@ -660,10 +668,10 @@ async function runAnalysis(url){
   if(R.h1Count>1) structScore-=15;
   if(R.imgsNoAlt>0) structScore-=20;
   // AI Ready
-  if(!R.hasLlms) aiScore-=35;
+  if(R.llmsStatus==='missing') aiScore-=35;
   if(R.gptBlocked) aiScore-=30;
   if(!R.hasSchema) aiScore-=20;
-  if(!R.hasRobots) aiScore-=15;
+  if(R.robotsStatus==='missing') aiScore-=15;
   // RODO
   if(!R.hasPrivacy) privScore-=30;
   if(!R.hasCookieBanner) privScore-=35;
@@ -700,8 +708,8 @@ function renderReport(d,url){
   if(!d.title) issues.push('brak tytułu strony');
   if(!d.metaDesc) issues.push('Google nie ma opisu Twojej strony do wyświetlenia');
   if(d.h1Count===0) issues.push('strona nie mówi jasno o czym jest');
-  if(!d.hasSitemap) issues.push('Google może nie widzieć części Twoich podstron');
-  if(!d.hasLlms) issues.push('ChatGPT i inne AI nie wiedzą co oferujesz');
+  if(d.sitemapStatus==='missing') issues.push('Google może nie widzieć części Twoich podstron');
+  if(d.llmsStatus==='missing') issues.push('ChatGPT i inne AI nie wiedzą co oferujesz');
   if(!d.hasSchema) issues.push('wyszukiwarki nie rozumieją czym się zajmujesz');
   if(d.mobileScore!=null&&d.mobileScore<50) issues.push('strona ładuje się za wolno na telefonach');
 
@@ -827,9 +835,11 @@ function buildSEO(d){
 
 function buildIndex(d){
   const f=[];
-  if(!d.hasSitemap) f.push({s:'red',t:'Brak sitemap.xml',src:'html',w:'Google nie ma listy Twoich podstron. Może nie indeksować regularnie całej witryny, szczególnie nowych treści.',fix:'Wygeneruj sitemap.xml i zgłoś w Google Search Console. WordPress: wtyczka Yoast lub RankMath.'});
+  if(d.sitemapStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić sitemap.xml',src:'html',w:'Nasz serwer nie mógł pobrać pliku sitemap.xml. To nie oznacza że go nie ma. Sprawdź ręcznie wpisując w przeglądarkę: '+d.domain+'/sitemap.xml',fix:null});
+  else if(!d.hasSitemap) f.push({s:'red',t:'Brak sitemap.xml',src:'html',w:'Google nie ma listy Twoich podstron. Może nie indeksować regularnie całej witryny, szczególnie nowych treści.',fix:'Wygeneruj sitemap.xml i zgłoś w Google Search Console. WordPress: wtyczka Yoast lub RankMath.'});
   else f.push({s:'green',t:'Sitemap.xml znaleziony',src:'html',w:'Google ma dostęp do listy Twoich podstron.',fix:null});
-  if(!d.hasRobots) f.push({s:'amber',t:'Brak pliku robots.txt',src:'html',w:'Robots.txt mówi wyszukiwarkom które strony mogą odwiedzać. Bez niego Google indeksuje wszystko, w tym strony które może nie powinny być widoczne.',fix:'Stwórz plik robots.txt w głównym katalogu strony.'});
+  if(d.robotsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić robots.txt',src:'html',w:'Nasz serwer nie mógł pobrać pliku robots.txt. Sprawdź ręcznie: '+d.domain+'/robots.txt',fix:null});
+  else if(!d.hasRobots) f.push({s:'amber',t:'Brak pliku robots.txt',src:'html',w:'Robots.txt mówi wyszukiwarkom które strony mogą odwiedzać. Bez niego Google indeksuje wszystko, w tym strony które może nie powinny być widoczne.',fix:'Stwórz plik robots.txt w głównym katalogu strony.'});
   else f.push({s:'green',t:'Robots.txt znaleziony',src:'html',w:'Wyszukiwarki wiedzą co mogą indeksować.',fix:null});
   if(d.hasRobots&&!d.robotsSitemap) f.push({s:'amber',t:'Robots.txt nie linkuje do sitemap',src:'html',w:'Warto dodać odnośnik do sitemap.xml w pliku robots.txt. Ułatwia to wyszukiwarkom znalezienie pełnej listy podstron.',fix:'Dodaj linię "Sitemap: https://twoja-domena.pl/sitemap.xml" w robots.txt.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
@@ -865,7 +875,8 @@ function buildSpeed(d){
 
 function buildAI(d){
   const f=[];
-  if(!d.hasLlms) f.push({s:'amber',t:'Brak pliku llms.txt',src:'html',w:'llms.txt to nowy standard który mówi asystentom AI (ChatGPT, Claude, Perplexity) które strony są najważniejsze na Twoim serwisie. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz /llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org — 15 minut roboty.'});
+  if(d.llmsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić llms.txt',src:'html',w:'Nasz serwer nie mógł pobrać pliku llms.txt. Sprawdź ręcznie: '+d.domain+'/llms.txt',fix:null});
+  else if(!d.hasLlms) f.push({s:'amber',t:'Brak pliku llms.txt',src:'html',w:'llms.txt to nowy standard który mówi asystentom AI (ChatGPT, Claude, Perplexity) które strony są najważniejsze na Twoim serwisie. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz /llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org, 15 minut roboty.'});
   else f.push({s:'green',t:'Plik llms.txt znaleziony',src:'html',w:'Asystenty AI mogą odczytać strukturę i najważniejsze treści serwisu.',fix:null});
   if(d.gptBlocked) f.push({s:'amber',t:'GPTBot (ChatGPT) ma zablokowany dostęp',src:'html',w:'Plik robots.txt blokuje GPTBot (bota ChatGPT). Gdy ktoś pyta ChatGPT o Twoją branżę, Twoja strona nie może być uwzględniona w odpowiedzi.',fix:'Jeśli chcesz być widoczny w AI: usuń blokadę GPTBot. Jeśli nie chcesz żeby AI trenowało na treściach, zostaw.'});
   if(!d.hasSchema) f.push({s:'amber',t:'Brak Schema.org — AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenty AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj Organization lub LocalBusiness JSON-LD do strony głównej.'});
