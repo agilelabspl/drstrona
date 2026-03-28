@@ -894,7 +894,8 @@ function buildPrivacy(d){
   if(d.hasGA) trackers.push('Google Analytics');
   if(d.hasFB) trackers.push('Facebook Pixel');
   if(d.hasHotjar) trackers.push('Hotjar');
-  if(trackers.length) f.push({s:'amber',t:`Wykryto trackery w HTML: ${trackers.join(', ')}`,src:'html',w:'Skrypty analityczne i marketingowe obecne w kodzie strony. Nie możemy sprawdzić czy uruchamiają się przed zgodą użytkownika (wymaga to uruchomienia przeglądarki z JS).',fix:'Upewnij się że Twój CMP (Cookiebot, CookieYes) blokuje te skrypty do momentu wyrażenia zgody.'});
+  if(trackers.length&&!d.hasCookieBanner) f.push({s:'red',t:`Trackery bez banera cookie: ${trackers.join(', ')}`,src:'html',w:'Na stronie są narzędzia śledzące użytkowników, ale nie znaleźliśmy banera cookie. Według RODO użytkownik musi wyrazić zgodę zanim te narzędzia zaczną działać.',fix:'Dodaj baner cookie (np. Cookiebot, CookieYes) który blokuje trackery do momentu wyrażenia zgody.'});
+  else if(trackers.length) f.push({s:'green',t:`Trackery wykryte, baner cookie obecny: ${trackers.join(', ')}`,src:'html',w:'Znaleźliśmy narzędzia analityczne i baner cookie. Upewnij się że trackery uruchamiają się dopiero po wyrażeniu zgody przez użytkownika.',fix:null});
   if(d.hasForms&&!d.formHasConsent) f.push({s:'amber',t:'Formularz bez widocznego checkboxa zgody',src:'html',w:'Jeśli formularz zbiera dane do marketingu, wymagana jest oddzielna zgoda użytkownika.',fix:'Dodaj checkbox z tekstem zgody marketingowej oddzielony od zgody na regulamin.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   return sec('RODO i prywatność','analiza HTML · nie ocena prawna',worst,f);
