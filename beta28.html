@@ -1244,15 +1244,19 @@ function buildSpeed(d){
   if(d.hasBlockingScripts) f.push({s:'amber',t:`${d.blockingScripts} skryptów blokuje ładowanie strony`,src:'html',w:'Skrypty bez atrybutu defer lub async blokują rendering strony. Przeglądarka musi pobrać i wykonać skrypt zanim pokaże resztę treści. To spowalnia ładowanie.',fix:'Dodaj atrybut defer (lub async) do tagów script. Defer ładuje skrypt równolegle i wykonuje po sparsowaniu HTML.'});
   if(d.totalImages>3&&!d.hasLazyLoading) f.push({s:'amber',t:`${d.imgsNoLazy} z ${d.totalImages} obrazków bez lazy loading`,src:'html',w:'Obrazki bez atrybutu loading="lazy" ładują się wszystkie naraz, nawet te niewidoczne na ekranie. To spowalnia pierwsze wyświetlenie strony i zużywa transfer użytkownika.',fix:'Dodaj loading="lazy" do obrazków poniżej pierwszego ekranu. Obrazki w nagłówku (hero) zostaw bez lazy.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
+  const grp=t=>`<div class="check-group-label" style="margin:12px 0 4px;font-weight:600;font-size:.95em;color:var(--ink2)">${t}</div>`;
   const cl = checklist('Sprawdzone elementy',[
-    chk(d.mobileScore!=null?d.mobileScore>=80:null, '📱 Szybkość na telefonie (PageSpeed mobile)', d.mobileScore!=null?d.mobileScore+'/100':null),
-    chk(d.lcp?parseFloat(d.lcp)<=2.5:null, '📱 Czas do głównej treści (LCP mobile)', d.lcp||'brak danych'),
-    chk(d.cls?parseFloat(d.cls)<=0.1:null, '📱 Stabilność layoutu (CLS mobile)', d.cls||'brak danych'),
-    chk(d.fcp?parseFloat(d.fcp)<=1.8:null, '📱 Pierwsze wyświetlenie (FCP mobile)', d.fcp||'brak danych'),
-    chk(d.tbt?parseFloat(d.tbt)<=200:null, '📱 Blokowanie interakcji (TBT mobile)', d.tbt||'brak danych'),
-    chk(d.desktopScore!=null?d.desktopScore>=80:null, '🖥️ Szybkość na komputerze (PageSpeed desktop)', d.desktopScore!=null?d.desktopScore+'/100':null),
-    chk(d.dLcp?parseFloat(d.dLcp)<=2.5:null, '🖥️ Czas do głównej treści (LCP desktop)', d.dLcp||'brak danych'),
-    chk(d.dFcp?parseFloat(d.dFcp)<=1.8:null, '🖥️ Pierwsze wyświetlenie (FCP desktop)', d.dFcp||'brak danych'),
+    grp('📱 Telefon'+(d.mobileScore!=null?' ('+d.mobileScore+'/100)':'')),
+    chk(d.mobileScore!=null?d.mobileScore>=80:null, 'Szybkość (PageSpeed mobile)', d.mobileScore!=null?d.mobileScore+'/100':null),
+    chk(d.lcp?parseFloat(d.lcp)<=2.5:null, 'Czas do głównej treści (LCP)', d.lcp||'brak danych'),
+    chk(d.cls?parseFloat(d.cls)<=0.1:null, 'Stabilność layoutu (CLS)', d.cls||'brak danych'),
+    chk(d.fcp?parseFloat(d.fcp)<=1.8:null, 'Pierwsze wyświetlenie (FCP)', d.fcp||'brak danych'),
+    chk(d.tbt?parseFloat(d.tbt)<=200:null, 'Blokowanie interakcji (TBT)', d.tbt||'brak danych'),
+    grp('🖥️ Komputer'+(d.desktopScore!=null?' ('+d.desktopScore+'/100)':'')),
+    chk(d.desktopScore!=null?d.desktopScore>=80:null, 'Szybkość (PageSpeed desktop)', d.desktopScore!=null?d.desktopScore+'/100':null),
+    chk(d.dLcp?parseFloat(d.dLcp)<=2.5:null, 'Czas do głównej treści (LCP)', d.dLcp||'brak danych'),
+    chk(d.dFcp?parseFloat(d.dFcp)<=1.8:null, 'Pierwsze wyświetlenie (FCP)', d.dFcp||'brak danych'),
+    grp('Wspólne'),
     chk(!d.hasUnminified, 'Pliki JS/CSS zminifikowane', d.totalJS+' skryptów, '+d.totalCSS+' arkuszy CSS'+(d.hasUnminified?' ('+d.unminifiedJS+' JS + '+d.unminifiedCSS+' CSS bez minifikacji)':'')),
     chk(!d.hasBlockingScripts, 'Skrypty nie blokują renderowania', d.hasBlockingScripts?d.blockingScripts+' bez defer/async':null),
     chk(d.totalImages<=3||d.hasLazyLoading, 'Lazy loading na obrazkach', d.totalImages>0?d.imgsNoLazy+' z '+d.totalImages+' bez loading="lazy"':null),
