@@ -564,9 +564,32 @@ async function runAnalysis(url){
 
   showStep(0); await delay(300);
   let html='', doc=null;
-  const mainHtml = await fetchViaProxy(url);
-  if(!mainHtml) throw new Error('Nie można pobrać strony — sprawdź adres lub spróbuj za chwilę');
-  html = mainHtml;
+  R.redirectChain=[];
+  R.finalUrl=url;
+  R.xRobotsTag='';
+  // Try our Worker first (with metadata), fallback to plain proxy
+  let gotMeta=false;
+  try{
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),12000);
+    const res=await fetch(`https://drstrona-proxy.agilelabs-pl.workers.dev/?url=${encodeURIComponent(url)}`,{signal:ctrl.signal});
+    clearTimeout(timer);
+    if(res.ok){
+      const t=await res.text();
+      if(t?.length>50&&!isErrorPage(t)){
+        html=t;
+        try{ R.redirectChain=JSON.parse(res.headers.get('X-Proxy-Chain')||'[]'); }catch{}
+        R.finalUrl=res.headers.get('X-Proxy-Final-Url')||url;
+        R.xRobotsTag=res.headers.get('X-Robots-Tag')||'';
+        gotMeta=true;
+      }
+    }
+  }catch{}
+  if(!html){
+    const mainHtml=await fetchViaProxy(url);
+    if(!mainHtml) throw new Error('Nie można pobrać strony — sprawdź adres lub spróbuj za chwilę');
+    html=mainHtml;
+  }
   doc = new DOMParser().parseFromString(html,'text/html');
 
   showStep(1); await delay(200);
@@ -584,6 +607,28 @@ async function runAnalysis(url){
   R.isHttps=url.startsWith('https');
   R.titleLength=R.title?R.title.length:0;
   R.descLength=R.metaDesc?R.metaDesc.length:0;
+
+  // noindex / meta robots
+  const metaRobots=doc.querySelector('meta[name="robots"]')?.getAttribute('content')?.toLowerCase()||'';
+  R.hasNoindex=metaRobots.includes('noindex')||R.xRobotsTag.toLowerCase().includes('noindex');
+  R.hasNofollow=metaRobots.includes('nofollow')||R.xRobotsTag.toLowerCase().includes('nofollow');
+  R.metaRobots=metaRobots||null;
+
+  // canonical conflict
+  R.canonicalConflict=false;
+  R.canonicalTarget=null;
+  if(R.canonical){
+    try{
+      const cUrl=new URL(R.canonical,url).href.replace(/\/$/,'');
+      const aUrl=R.finalUrl.replace(/\/$/,'');
+      R.canonicalTarget=cUrl;
+      R.canonicalConflict=cUrl!==aUrl&&cUrl!==url.replace(/\/$/,'');
+    }catch{}
+  }
+
+  // redirect chain
+  R.hasRedirects=R.redirectChain.length>1;
+  R.redirectCount=R.redirectChain.length-1;
 
   showStep(2); await delay(200);
   const h1s=[...doc.querySelectorAll('h1')];
@@ -760,9 +805,12 @@ async function runAnalysis(url){
   if(!R.metaDesc) seoScore-=35;
   if(!R.canonical) seoScore-=30;
   // Indeksowanie: sitemap, robots
-  if(R.sitemapStatus==='missing') indexScore-=40;
-  if(R.robotsStatus==='missing') indexScore-=35;
-  if(R.hasRobots&&!R.robotsSitemap) indexScore-=25;
+  if(R.hasNoindex) indexScore-=50;
+  if(R.sitemapStatus==='missing') indexScore-=25;
+  if(R.robotsStatus==='missing') indexScore-=20;
+  if(R.hasRobots&&!R.robotsSitemap) indexScore-=15;
+  if(R.hasRedirects&&R.redirectCount>=3) indexScore-=10;
+  if(R.canonicalConflict) indexScore-=15;
   // Struktura: schema, h1, alt
   if(!R.hasSchema) structScore-=35;
   if(R.h1Count===0) structScore-=30;
@@ -814,6 +862,7 @@ function renderReport(d,url){
   if(!d.title) critical.push('brak tytułu strony');
   if(!d.metaDesc) critical.push('Google nie ma opisu Twojej strony do wyświetlenia');
   if(d.mobileScore!=null&&d.mobileScore<50) critical.push('strona ładuje się za wolno na telefonach');
+  if(d.hasNoindex) critical.push('strona mówi Google żeby jej nie indeksował');
   if(d.h1Count===0) minor.push('strona nie mówi jasno o czym jest');
   if(d.sitemapStatus==='missing') minor.push('Google może nie widzieć części Twoich podstron');
   if(d.llmsStatus==='missing') minor.push('ChatGPT i inne AI nie wiedzą co oferujesz');
@@ -970,11 +1019,17 @@ function buildIndex(d){
   else if(!d.hasRobots) f.push({s:'amber',t:'Brak instrukcji dla wyszukiwarek',src:'html',w:'Plik robots.txt mówi wyszukiwarkom które strony mogą odwiedzać. Bez niego Google indeksuje wszystko, w tym strony które może nie powinny być widoczne.',fix:'Stwórz plik robots.txt w głównym katalogu strony.'});
   else f.push({s:'green',t:'Instrukcje dla wyszukiwarek znalezione',src:'html',w:'Wyszukiwarki wiedzą co mogą indeksować.',fix:null});
   if(d.hasRobots&&!d.robotsSitemap) f.push({s:'amber',t:'Instrukcje nie linkują do mapy strony',src:'html',w:'Warto dodać odnośnik do mapy strony w pliku robots.txt. Ułatwia to wyszukiwarkom znalezienie pełnej listy podstron.',fix:'Dodaj linię "Sitemap: https://twoja-domena.pl/sitemap.xml" w robots.txt.'});
+  if(d.hasNoindex) f.push({s:'red',t:'Strona mówi Google: "nie indeksuj mnie"',src:'html',w:'Na stronie jest dyrektywa noindex'+(d.metaRobots?' (meta robots: '+esc(d.metaRobots)+')':'')+'. Google nie pokaże tej strony w wynikach wyszukiwania. Jeśli to celowe (np. strona testowa), wszystko OK. Jeśli nie, tracisz cały ruch organiczny.',fix:'Usuń meta robots noindex lub X-Robots-Tag noindex. W WordPress: Ustawienia → Czytelność → odznacz "Proś wyszukiwarki o nieindeksowanie".'});
+  if(d.canonicalConflict) f.push({s:'amber',t:'Canonical wskazuje na inny adres',src:'html',w:'Canonical URL ('+esc(d.canonicalTarget)+') różni się od faktycznego adresu strony. Google może traktować tę stronę jako duplikat i nie indeksować jej. Jeśli to celowe przekierowanie do wersji głównej, jest OK.',fix:'Upewnij się że canonical wskazuje dokładnie na adres tej strony (z www lub bez, z https).'});
+  if(d.hasRedirects&&d.redirectCount>=2) f.push({s:'amber',t:`Łańcuch ${d.redirectCount} przekierowań zanim strona się załaduje`,src:'html',w:'Zanim użytkownik (i Google) zobaczy stronę, przechodzi przez '+d.redirectCount+' przekierowań. Każde przekierowanie spowalnia ładowanie i osłabia "siłę SEO". Google preferuje max 1 przekierowanie.',fix:'Skróć łańcuch przekierowań. Zamiast A→B→C→D ustaw A→D bezpośrednio.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
+    chk(!d.hasNoindex, 'Strona widoczna dla Google (brak noindex)', d.hasNoindex?'noindex wykryty!'+(d.metaRobots?' meta robots: '+esc(d.metaRobots):''):null),
     chk(d.sitemapStatus==='found', 'Mapa strony dla Google (sitemap.xml)', d.sitemapStatus==='unknown'?'nie udało się sprawdzić':null),
     chk(d.robotsStatus==='found', 'Instrukcje dla wyszukiwarek (robots.txt)', d.robotsStatus==='unknown'?'nie udało się sprawdzić':null),
     chk(d.hasRobots?d.robotsSitemap:null, 'Mapa strony w instrukcjach (sitemap w robots.txt)'),
+    chk(!d.canonicalConflict, 'Canonical URL poprawny', d.canonical?esc(d.canonical):null),
+    chk(!d.hasRedirects||d.redirectCount<2, 'Brak łańcucha przekierowań', d.hasRedirects?d.redirectCount+' przekierowań':null),
     chk(d.isHttps, 'Bezpieczne połączenie (HTTPS)'),
     chk(d.internalLinks>3, 'Linki wewnętrzne', d.internalLinks+' linków wewnętrznych'),
   ]);
@@ -1149,7 +1204,9 @@ function buildGood(d){
   if(d.hasSitemap) g.push('Mapa strony dla Google znaleziona');
   if(d.hasLlms) g.push('Przewodnik dla AI (llms.txt) dostępny');
   if(d.mobileScore!=null&&d.mobileScore>=80) g.push('Dobra szybkość na telefonie: '+d.mobileScore+'/100');
-  if(d.canonical) g.push('Główny adres strony ustawiony poprawnie');
+  if(d.canonical&&!d.canonicalConflict) g.push('Główny adres strony ustawiony poprawnie');
+  if(!d.hasNoindex) g.push('Strona widoczna dla Google (brak noindex)');
+  if(!d.hasRedirects) g.push('Brak zbędnych przekierowań');
   if(d.hasTerms) g.push('Regulamin dostępny');
   if(d.hasOG) g.push('Podgląd w social media (Open Graph) działa');
   if(d.hasCTA) g.push('Przyciski zachęcające do działania znalezione');
