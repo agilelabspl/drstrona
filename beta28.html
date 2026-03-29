@@ -915,24 +915,28 @@ async function runAnalysis(url){
   }catch{R.hasRobots=false;R.gptBlocked=false;R.claudeBlocked=false;R.perplexityBlocked=false;}
 
   showStep(5); await delay(500);
-  R.mobileScore=null;
-  for(let attempt=0;attempt<3;attempt++){
-    try{
-      const ctrl=new AbortController();
-      const timer=setTimeout(()=>ctrl.abort(),20000);
-      const psRes=await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile&key=AIzaSyB9_8AJwuTQVVHOYSj14gz0vwmLN0GHn3Y`,{signal:ctrl.signal});
-      clearTimeout(timer);
-      const ps=await psRes.json();
-      if(ps.error){ if(attempt<2){await delay(3000);continue;} break; }
-      R.mobileScore=ps.lighthouseResult?.categories?.performance?.score!=null?Math.round(ps.lighthouseResult.categories.performance.score*100):null;
-      const a=ps.lighthouseResult?.audits||{};
-      R.lcp=a['largest-contentful-paint']?.displayValue||null;
-      R.cls=a['cumulative-layout-shift']?.displayValue||null;
-      R.fcp=a['first-contentful-paint']?.displayValue||null;
-      R.tbt=a['total-blocking-time']?.displayValue||null;
-      break;
-    }catch{ if(attempt<2){await delay(3000);continue;} }
+  R.mobileScore=null;R.desktopScore=null;
+  R.dLcp=null;R.dFcp=null;R.dCls=null;R.dTbt=null;
+  const psKey='AIzaSyB9_8AJwuTQVVHOYSj14gz0vwmLN0GHn3Y';
+  async function fetchPS(strategy){
+    for(let attempt=0;attempt<3;attempt++){
+      try{
+        const ctrl=new AbortController();
+        const timer=setTimeout(()=>ctrl.abort(),20000);
+        const res=await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${strategy}&key=${psKey}`,{signal:ctrl.signal});
+        clearTimeout(timer);
+        const ps=await res.json();
+        if(ps.error){ if(attempt<2){await delay(3000);continue;} return null; }
+        const score=ps.lighthouseResult?.categories?.performance?.score!=null?Math.round(ps.lighthouseResult.categories.performance.score*100):null;
+        const a=ps.lighthouseResult?.audits||{};
+        return {score,lcp:a['largest-contentful-paint']?.displayValue||null,cls:a['cumulative-layout-shift']?.displayValue||null,fcp:a['first-contentful-paint']?.displayValue||null,tbt:a['total-blocking-time']?.displayValue||null};
+      }catch{ if(attempt<2){await delay(3000);continue;} }
+    }
+    return null;
   }
+  const [mobResult,dskResult]=await Promise.all([fetchPS('mobile'),fetchPS('desktop')]);
+  if(mobResult){R.mobileScore=mobResult.score;R.lcp=mobResult.lcp;R.cls=mobResult.cls;R.fcp=mobResult.fcp;R.tbt=mobResult.tbt;}
+  if(dskResult){R.desktopScore=dskResult.score;R.dLcp=dskResult.lcp;R.dFcp=dskResult.fcp;R.dCls=dskResult.cls;R.dTbt=dskResult.tbt;}
   R.pageSpeedUrl='https://pagespeed.web.dev/analysis?url='+encodeURIComponent(url);
 
   showStep(6); await delay(200);
@@ -1212,30 +1216,46 @@ function buildStructure(d){
 
 function buildSpeed(d){
   const f=[];
+  const psLink=`<a href="${d.pageSpeedUrl||'https://pagespeed.web.dev'}" target="_blank" style="color:var(--accent);text-decoration:underline">otwórz PageSpeed Insights →</a>`;
+  // Mobile
   if(d.mobileScore==null){
-    f.push({s:'amber',t:'Google PageSpeed chwilowo niedostępny',src:'live',w:'API nie zwróciło danych po 2 próbach. To normalne przy dużym ruchu. Wynik szybkości nie wpływa na pozostałe sekcje raportu.',fix:`Sprawdź ręcznie: <a href="${d.pageSpeedUrl||'https://pagespeed.web.dev'}" target="_blank" style="color:var(--accent);text-decoration:underline">otwórz PageSpeed Insights →</a>`});
+    f.push({s:'amber',t:'📱 Telefon: Google PageSpeed chwilowo niedostępny',src:'live',w:'API nie zwróciło danych po 2 próbach. To normalne przy dużym ruchu. Wynik szybkości nie wpływa na pozostałe sekcje raportu.',fix:`Sprawdź ręcznie: ${psLink}`});
   } else if(d.mobileScore<50){
-    f.push({s:'red',t:`Wynik mobilny: ${d.mobileScore}/100 — za wolno`,src:'live',w:`Wynik poniżej 50 to poważny problem. Badania Google pokazują że 53% użytkowników zamyka stronę jeśli ładuje się dłużej niż 3 sekundy. Tracisz klientów zanim zobaczą ofertę.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:`Szczegóły: <a href="${d.pageSpeedUrl||'https://pagespeed.web.dev'}" target="_blank" style="color:var(--accent);text-decoration:underline">otwórz PageSpeed Insights →</a>`});
+    f.push({s:'red',t:`📱 Telefon: ${d.mobileScore}/100 — za wolno`,src:'live',w:`Wynik poniżej 50 to poważny problem. Badania Google pokazują że 53% użytkowników zamyka stronę jeśli ładuje się dłużej niż 3 sekundy. Tracisz klientów zanim zobaczą ofertę.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:`Szczegóły: ${psLink}`});
   } else if(d.mobileScore<80){
-    f.push({s:'amber',t:`Wynik mobilny: ${d.mobileScore}/100 — jest pole do poprawy`,src:'live',w:`Strona działa, ale wolniej niż powinna. Część użytkowników może ją opuszczać.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:`Szczegóły: <a href="${d.pageSpeedUrl||'https://pagespeed.web.dev'}" target="_blank" style="color:var(--accent);text-decoration:underline">otwórz PageSpeed Insights →</a>`});
+    f.push({s:'amber',t:`📱 Telefon: ${d.mobileScore}/100 — jest pole do poprawy`,src:'live',w:`Strona działa, ale wolniej niż powinna na telefonach. Część użytkowników mobilnych może ją opuszczać.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:`Szczegóły: ${psLink}`});
   } else {
-    f.push({s:'green',t:`Wynik mobilny: ${d.mobileScore}/100 — dobry wynik`,src:'live',w:`Strona ładuje się szybko na urządzeniach mobilnych.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:null});
+    f.push({s:'green',t:`📱 Telefon: ${d.mobileScore}/100 — dobry wynik`,src:'live',w:`Strona ładuje się szybko na telefonach.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:null});
+  }
+  // Desktop
+  if(d.desktopScore==null){
+    f.push({s:'amber',t:'🖥️ Komputer: Google PageSpeed chwilowo niedostępny',src:'live',w:'API nie zwróciło danych dla wersji desktopowej.',fix:`Sprawdź ręcznie: ${psLink}`});
+  } else if(d.desktopScore<50){
+    f.push({s:'red',t:`🖥️ Komputer: ${d.desktopScore}/100 — za wolno`,src:'live',w:`Strona ładuje się za wolno nawet na komputerze.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:`Szczegóły: ${psLink}`});
+  } else if(d.desktopScore<80){
+    f.push({s:'amber',t:`🖥️ Komputer: ${d.desktopScore}/100 — jest pole do poprawy`,src:'live',w:`Strona mogłaby ładować się szybciej na komputerach.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:`Szczegóły: ${psLink}`});
+  } else {
+    f.push({s:'green',t:`🖥️ Komputer: ${d.desktopScore}/100 — dobry wynik`,src:'live',w:`Strona ładuje się szybko na komputerach.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:null});
   }
   if(d.hasUnminified) f.push({s:'amber',t:`Niezminifikowane pliki: ${d.unminifiedJS} JS, ${d.unminifiedCSS} CSS`,src:'html',w:'Pliki JavaScript i CSS nie są zminifikowane (skompresowane). Minifikacja usuwa zbędne spacje i komentarze, zmniejszając rozmiar plików o 20-40%. To przyspiesza ładowanie strony.',fix:'Włącz minifikację w CMS lub narzędziu do budowania. WordPress: wtyczka Autoptimize lub WP Rocket.'});
   if(d.hasBlockingScripts) f.push({s:'amber',t:`${d.blockingScripts} skryptów blokuje ładowanie strony`,src:'html',w:'Skrypty bez atrybutu defer lub async blokują rendering strony. Przeglądarka musi pobrać i wykonać skrypt zanim pokaże resztę treści. To spowalnia ładowanie.',fix:'Dodaj atrybut defer (lub async) do tagów script. Defer ładuje skrypt równolegle i wykonuje po sparsowaniu HTML.'});
   if(d.totalImages>3&&!d.hasLazyLoading) f.push({s:'amber',t:`${d.imgsNoLazy} z ${d.totalImages} obrazków bez lazy loading`,src:'html',w:'Obrazki bez atrybutu loading="lazy" ładują się wszystkie naraz, nawet te niewidoczne na ekranie. To spowalnia pierwsze wyświetlenie strony i zużywa transfer użytkownika.',fix:'Dodaj loading="lazy" do obrazków poniżej pierwszego ekranu. Obrazki w nagłówku (hero) zostaw bez lazy.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
-    chk(d.mobileScore!=null?d.mobileScore>=80:null, 'Szybkość na telefonie (PageSpeed mobile)', d.mobileScore!=null?d.mobileScore+'/100':null),
-    chk(d.lcp?parseFloat(d.lcp)<=2.5:null, 'Czas do głównej treści (Largest Contentful Paint)', d.lcp||'brak danych'),
-    chk(d.cls?parseFloat(d.cls)<=0.1:null, 'Stabilność layoutu (Cumulative Layout Shift)', d.cls||'brak danych'),
-    chk(d.fcp?parseFloat(d.fcp)<=1.8:null, 'Pierwsze wyświetlenie (First Contentful Paint)', d.fcp||'brak danych'),
-    chk(d.tbt?parseFloat(d.tbt)<=200:null, 'Blokowanie interakcji (Total Blocking Time)', d.tbt||'brak danych'),
+    chk(d.mobileScore!=null?d.mobileScore>=80:null, '📱 Szybkość na telefonie (PageSpeed mobile)', d.mobileScore!=null?d.mobileScore+'/100':null),
+    chk(d.lcp?parseFloat(d.lcp)<=2.5:null, '📱 Czas do głównej treści (LCP mobile)', d.lcp||'brak danych'),
+    chk(d.cls?parseFloat(d.cls)<=0.1:null, '📱 Stabilność layoutu (CLS mobile)', d.cls||'brak danych'),
+    chk(d.fcp?parseFloat(d.fcp)<=1.8:null, '📱 Pierwsze wyświetlenie (FCP mobile)', d.fcp||'brak danych'),
+    chk(d.tbt?parseFloat(d.tbt)<=200:null, '📱 Blokowanie interakcji (TBT mobile)', d.tbt||'brak danych'),
+    chk(d.desktopScore!=null?d.desktopScore>=80:null, '🖥️ Szybkość na komputerze (PageSpeed desktop)', d.desktopScore!=null?d.desktopScore+'/100':null),
+    chk(d.dLcp?parseFloat(d.dLcp)<=2.5:null, '🖥️ Czas do głównej treści (LCP desktop)', d.dLcp||'brak danych'),
+    chk(d.dFcp?parseFloat(d.dFcp)<=1.8:null, '🖥️ Pierwsze wyświetlenie (FCP desktop)', d.dFcp||'brak danych'),
     chk(!d.hasUnminified, 'Pliki JS/CSS zminifikowane', d.totalJS+' skryptów, '+d.totalCSS+' arkuszy CSS'+(d.hasUnminified?' ('+d.unminifiedJS+' JS + '+d.unminifiedCSS+' CSS bez minifikacji)':'')),
     chk(!d.hasBlockingScripts, 'Skrypty nie blokują renderowania', d.hasBlockingScripts?d.blockingScripts+' bez defer/async':null),
     chk(d.totalImages<=3||d.hasLazyLoading, 'Lazy loading na obrazkach', d.totalImages>0?d.imgsNoLazy+' z '+d.totalImages+' bez loading="lazy"':null),
   ]);
-  return sec('Szybkość strony',d.lcp?`LCP: ${d.lcp}${d.cls?' · CLS: '+d.cls:''}`:d.mobileScore!=null?`Score: ${d.mobileScore}/100`:'Google PageSpeed',worst,f,cl);
+  const subtitle=d.mobileScore!=null&&d.desktopScore!=null?`📱 ${d.mobileScore} · 🖥️ ${d.desktopScore}`:d.lcp?`LCP: ${d.lcp}${d.cls?' · CLS: '+d.cls:''}`:d.mobileScore!=null?`Score: ${d.mobileScore}/100`:'Google PageSpeed';
+  return sec('Szybkość strony',subtitle,worst,f,cl);
 }
 
 function buildAI(d){
@@ -1372,6 +1392,7 @@ function buildGood(d){
   if(d.hasSitemap) g.push('Mapa strony dla Google znaleziona');
   if(d.hasLlms) g.push('Przewodnik dla AI (llms.txt) dostępny');
   if(d.mobileScore!=null&&d.mobileScore>=80) g.push('Dobra szybkość na telefonie: '+d.mobileScore+'/100');
+  if(d.desktopScore!=null&&d.desktopScore>=80) g.push('Dobra szybkość na komputerze: '+d.desktopScore+'/100');
   if(d.canonical&&!d.canonicalConflict) g.push('Główny adres strony ustawiony poprawnie');
   if(!d.hasNoindex) g.push('Strona widoczna dla Google (brak noindex)');
   if(!d.hasRedirects) g.push('Brak zbędnych przekierowań');
