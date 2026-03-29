@@ -557,7 +557,9 @@ async function fetchViaProxy(targetUrl){
 }
 
 async function runAnalysis(url){
-  const domain = new URL(url).hostname;
+  const parsedUrl = new URL(url);
+  const domain = parsedUrl.hostname;
+  const origin = parsedUrl.origin;
   const R = {url, domain, ts: new Date().toLocaleString('pl-PL')};
 
   showStep(0); await delay(300);
@@ -668,7 +670,7 @@ async function runAnalysis(url){
 
   showStep(3); await delay(200);
   try{
-    const sc = await fetchViaProxy('https://'+domain+'/sitemap.xml');
+    const sc = await fetchViaProxy(origin+'/sitemap.xml');
     if(sc===null) R.sitemapStatus='unknown';
     else if(sc&&!sc.includes('<!doctype')&&(sc.includes('<urlset')||sc.includes('<sitemapindex'))) R.sitemapStatus='found';
     else R.sitemapStatus='missing';
@@ -677,14 +679,14 @@ async function runAnalysis(url){
 
   showStep(4); await delay(200);
   try{
-    const lc = await fetchViaProxy('https://'+domain+'/llms.txt');
+    const lc = await fetchViaProxy(origin+'/llms.txt');
     if(lc===null) R.llmsStatus='unknown';
     else if(lc&&lc.length>20&&!lc.toLowerCase().includes('not found')&&!lc.includes('<!doctype')&&!lc.includes('<html')) R.llmsStatus='found';
     else R.llmsStatus='missing';
   }catch{R.llmsStatus='unknown';}
   R.hasLlms=R.llmsStatus==='found';
   try{
-    const rc = await fetchViaProxy('https://'+domain+'/robots.txt');
+    const rc = await fetchViaProxy(origin+'/robots.txt');
     if(rc===null) R.robotsStatus='unknown';
     else { R.robotsStatus=rc.length>5?'found':'missing'; }
     const rt=rc||'';
