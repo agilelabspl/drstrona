@@ -527,6 +527,7 @@ async function startScan(){
 }
 
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function esc(s){ if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 function isErrorPage(html){
   const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
@@ -647,6 +648,24 @@ async function runAnalysis(url){
   R.hasFB=html.includes('facebook.com/tr')||html.includes('fbq(');
   R.hasHotjar=html.includes('hotjar.com');
 
+  // E-E-A-T signals
+  const authorPatterns=[...doc.querySelectorAll('[class*="author"],[rel="author"],[itemprop="author"],a[href*="linkedin.com/in/"]')];
+  R.hasAuthor=authorPatterns.length>0;
+  R.hasAuthorSchema=R.schemas.some(s=>s['@type']==='Person'||(Array.isArray(s['@graph'])&&s['@graph'].some(g=>g['@type']==='Person')));
+  R.hasAboutPage=links.some(t=>t.includes('o nas')||t.includes('about')||t.includes('o firmie')||t.includes('zespo')||t.includes('team'));
+  R.hasTrustBadges=(R.hasAddress?1:0)+(R.hasPhone?1:0)+(R.hasEmail?1:0)+(R.hasPrivacy?1:0)+(R.hasTerms?1:0)+(R.hasSocial?1:0);
+
+  // AEO-friendly formats (snackable content for AI)
+  R.listCount=doc.querySelectorAll('ol,ul').length;
+  R.tableCount=doc.querySelectorAll('table').length;
+  R.dlCount=doc.querySelectorAll('dl').length;
+  R.hasAEOFormats=(R.listCount+R.tableCount+R.dlCount)>0;
+  R.aeoTotal=R.listCount+R.tableCount+R.dlCount;
+
+  // Text-to-HTML ratio
+  const textLen=(doc.body?.textContent||'').replace(/\s+/g,' ').trim().length;
+  R.textToHtmlRatio=R.htmlLength>0?Math.round((textLen/R.htmlLength)*100):0;
+
   showStep(3); await delay(200);
   try{
     const sc = await fetchViaProxy('https://'+domain+'/sitemap.xml');
@@ -748,10 +767,12 @@ async function runAnalysis(url){
   if(R.h1Count>1) structScore-=15;
   if(R.imgsNoAlt>0) structScore-=20;
   // AI Ready
-  if(R.llmsStatus==='missing') aiScore-=35;
-  if(R.gptBlocked) aiScore-=30;
-  if(!R.hasSchema) aiScore-=20;
-  if(R.robotsStatus==='missing') aiScore-=15;
+  if(R.llmsStatus==='missing') aiScore-=30;
+  if(R.gptBlocked) aiScore-=25;
+  if(!R.hasSchema) aiScore-=15;
+  if(R.robotsStatus==='missing') aiScore-=10;
+  if(!R.hasAEOFormats) aiScore-=10;
+  if(!R.hasAuthor&&!R.hasAuthorSchema) aiScore-=10;
   // RODO
   if(!R.hasPrivacy) privScore-=30;
   if(!R.hasCookieBanner) privScore-=35;
@@ -802,7 +823,7 @@ function renderReport(d,url){
 
   el.innerHTML=`
     <div class="report-header">
-      <div class="report-url">${d.url} · ${d.ts}</div>
+      <div class="report-url">${esc(d.url)} · ${d.ts}</div>
       <div class="report-title">Wyniki zdrowia Twojej strony</div>
       <div class="report-intro">Zbadaliśmy 6 obszarów (+1 bonusowy) Twojej strony. Zapoznaj się z wynikami i receptą.</div>
       <div class="report-meta">Analiza HTML + Google PageSpeed API · strona główna</div>
@@ -925,24 +946,24 @@ function buildSEO(d){
   if(!f.length) f.push({s:'green',t:'SEO podstawy wyglądają dobrze',src:'html',w:'Tytuł, opis i canonical są na miejscu.',fix:null});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
-    chk(!!d.title, 'Tytuł strony (title tag)', d.title?d.titleLength+' znaków: "'+d.title.substring(0,60)+(d.title.length>60?'…':'')+'"':null),
+    chk(!!d.title, 'Tytuł strony (title tag)', d.title?d.titleLength+' znaków: "'+esc(d.title.substring(0,60))+(d.title.length>60?'…':'')+'"':null),
     chk(!!d.metaDesc, 'Opis strony dla Google (meta description)', d.metaDesc?d.descLength+' znaków':null),
     chk(!!d.canonical, 'Główny adres strony (canonical URL)'),
-    chk(d.h1Count===1, 'Jeden główny nagłówek (H1)', d.h1Text?'"'+d.h1Text.substring(0,60)+'"':null),
+    chk(d.h1Count===1, 'Jeden główny nagłówek (H1)', d.h1Text?'"'+esc(d.h1Text.substring(0,60))+'"':null),
     chk(d.h2Count>0, 'Podtytuły na stronie (H2)', d.h2Count+' znalezionych'),
     chk(!!d.hasOG, 'Podgląd w social media (Open Graph)', d.ogImage?'Obrazek podglądu: tak':'Brak obrazka podglądu'),
-    chk(!!d.lang, 'Język strony ustawiony', d.lang?'Język: '+d.lang:null),
+    chk(!!d.lang, 'Język strony ustawiony', d.lang?'Język: '+esc(d.lang):null),
     chk(d.wordCount>0?(d.wordCount>200):null, 'Wystarczająca ilość treści', d.wordCount>0?d.wordCount+' słów'+(d.wordCount<200?' (mało, Google preferuje min. 300)':''):'treść ładowana przez JavaScript'),
   ]);
-  return sec('SEO',d.title?`"${d.title.substring(0,50)}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f,cl);
+  return sec('SEO',d.title?`"${esc(d.title.substring(0,50))}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f,cl);
 }
 
 function buildIndex(d){
   const f=[];
-  if(d.sitemapStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić mapy strony',src:'html',w:'Nasz serwer nie mógł pobrać pliku sitemap.xml. To nie oznacza że go nie ma. Sprawdź ręcznie wpisując w przeglądarkę: '+d.domain+'/sitemap.xml',fix:null});
+  if(d.sitemapStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić mapy strony',src:'html',w:'Nasz serwer nie mógł pobrać pliku sitemap.xml. To nie oznacza że go nie ma. Sprawdź ręcznie wpisując w przeglądarkę: '+esc(d.domain)+'/sitemap.xml',fix:null});
   else if(!d.hasSitemap) f.push({s:'red',t:'Brak mapy strony dla Google',src:'html',w:'Google nie ma listy Twoich podstron. Może nie indeksować regularnie całej witryny, szczególnie nowych treści.',fix:'Wygeneruj plik sitemap.xml i zgłoś go w Google Search Console. WordPress: wtyczka Yoast lub RankMath.'});
   else f.push({s:'green',t:'Mapa strony znaleziona',src:'html',w:'Google ma dostęp do listy Twoich podstron.',fix:null});
-  if(d.robotsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić instrukcji dla wyszukiwarek',src:'html',w:'Nasz serwer nie mógł pobrać pliku robots.txt. Sprawdź ręcznie: '+d.domain+'/robots.txt',fix:null});
+  if(d.robotsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić instrukcji dla wyszukiwarek',src:'html',w:'Nasz serwer nie mógł pobrać pliku robots.txt. Sprawdź ręcznie: '+esc(d.domain)+'/robots.txt',fix:null});
   else if(!d.hasRobots) f.push({s:'amber',t:'Brak instrukcji dla wyszukiwarek',src:'html',w:'Plik robots.txt mówi wyszukiwarkom które strony mogą odwiedzać. Bez niego Google indeksuje wszystko, w tym strony które może nie powinny być widoczne.',fix:'Stwórz plik robots.txt w głównym katalogu strony.'});
   else f.push({s:'green',t:'Instrukcje dla wyszukiwarek znalezione',src:'html',w:'Wyszukiwarki wiedzą co mogą indeksować.',fix:null});
   if(d.hasRobots&&!d.robotsSitemap) f.push({s:'amber',t:'Instrukcje nie linkują do mapy strony',src:'html',w:'Warto dodać odnośnik do mapy strony w pliku robots.txt. Ułatwia to wyszukiwarkom znalezienie pełnej listy podstron.',fix:'Dodaj linię "Sitemap: https://twoja-domena.pl/sitemap.xml" w robots.txt.'});
@@ -963,8 +984,9 @@ function buildStructure(d){
   else f.push({s:'green',t:'Google rozumie czym się zajmujesz',src:'html',w:'Dane strukturalne są na miejscu. Wyszukiwarki i AI wiedzą czym jest Twoja firma.',fix:null});
   if(d.h1Count===0) f.push({s:'red',t:'Strona nie ma głównego nagłówka',src:'html',w:'Główny nagłówek (H1) mówi Google i użytkownikom o czym jest ta strona. Jego brak osłabia widoczność w wyszukiwarce.',fix:'Dodaj jeden główny nagłówek z frazą opisującą Twoją działalność.'});
   else if(d.h1Count>1) f.push({s:'amber',t:`Za dużo głównych nagłówków (${d.h1Count})`,src:'html',w:'Na stronie powinien być dokładnie jeden główny nagłówek. Wiele nagłówków H1 dezorientuje wyszukiwarki.',fix:'Zostaw jeden główny nagłówek, pozostałe zamień na podtytuły.'});
-  else f.push({s:'green',t:`Główny nagłówek poprawny: "${(d.h1Text||'').substring(0,50)}"`,src:'html',w:'Strona ma jeden, jasny nagłówek główny.',fix:null});
+  else f.push({s:'green',t:`Główny nagłówek poprawny: "${esc((d.h1Text||'').substring(0,50))}"`,src:'html',w:'Strona ma jeden, jasny nagłówek główny.',fix:null});
   if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez opisu`,src:'html',w:'Obrazki bez opisu są niewidoczne dla Google Images i czytników ekranu (używanych przez osoby niewidome). Tracisz dodatkowe źródło ruchu z wyszukiwarki grafik.',fix:'Dodaj opis (alt) do każdego obrazka w ustawieniach CMS.'});
+  if(d.textToHtmlRatio<10) f.push({s:'amber',t:`Mało treści w kodzie strony (${d.textToHtmlRatio}%)`,src:'html',w:'Stosunek tekstu do kodu HTML jest niski (poniżej 10%). Oznacza to że strona ma dużo kodu a mało treści. Google i AI preferują strony bogate w treść. Niska gęstość tekstu może osłabić widoczność w wynikach wyszukiwania.',fix:'Dodaj więcej treści tekstowej (opisy, artykuły, FAQ). Rozważ usunięcie nadmiarowego kodu lub inline CSS/JS.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(!!d.hasSchema, 'Dane o firmie dla Google (Schema.org)', d.schemaTypes.length?'Typy: '+d.schemaTypes.join(', '):null),
@@ -973,6 +995,7 @@ function buildStructure(d){
     chk(d.h3Count>0, 'Podpodtytuły (H3)', d.h3Count+' znalezionych'),
     chk(d.totalImages>0?d.imgsNoAlt===0:true, 'Wszystkie obrazki mają opis (alt)', d.totalImages>0?d.imgsNoAlt+' bez opisu z '+d.totalImages:'brak obrazków'),
     chk(d.totalImages>0, 'Obrazki na stronie', d.totalImages+' znalezionych'),
+    chk(d.textToHtmlRatio>=10, 'Gęstość treści (text-to-HTML ratio)', d.textToHtmlRatio+'% '+(d.textToHtmlRatio>=25?'(dobra)':d.textToHtmlRatio>=10?'(OK)':'(niska)')),
   ]);
   return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f,cl);
 }
@@ -1001,11 +1024,13 @@ function buildSpeed(d){
 
 function buildAI(d){
   const f=[];
-  if(d.llmsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić widoczności dla AI',src:'html',w:'Nasz serwer nie mógł pobrać pliku llms.txt. Sprawdź ręcznie: '+d.domain+'/llms.txt',fix:null});
+  if(d.llmsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić widoczności dla AI',src:'html',w:'Nasz serwer nie mógł pobrać pliku llms.txt. Sprawdź ręcznie: '+esc(d.domain)+'/llms.txt',fix:null});
   else if(!d.hasLlms) f.push({s:'amber',t:'Asystenty AI nie mają przewodnika po Twojej stronie',src:'html',w:'Plik llms.txt to nowy standard, który mówi asystentom AI (ChatGPT, Claude, Perplexity) które treści na Twojej stronie są najważniejsze. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz plik llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org, 15 minut roboty.'});
   else f.push({s:'green',t:'Przewodnik dla AI znaleziony (llms.txt)',src:'html',w:'Asystenty AI mogą odczytać strukturę i najważniejsze treści serwisu.',fix:null});
   if(d.gptBlocked) f.push({s:'amber',t:'GPTBot (ChatGPT) ma zablokowany dostęp',src:'html',w:'Plik robots.txt blokuje GPTBot (bota ChatGPT). Gdy ktoś pyta ChatGPT o Twoją branżę, Twoja strona nie może być uwzględniona w odpowiedzi.',fix:'Jeśli chcesz być widoczny w AI: usuń blokadę GPTBot. Jeśli nie chcesz żeby AI trenowało na treściach, zostaw.'});
   if(!d.hasSchema) f.push({s:'amber',t:'AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenty AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony głównej.'});
+  if(!d.hasAEOFormats) f.push({s:'amber',t:'Brak formatów przyjaznych AI (listy, tabele)',src:'html',w:'AI preferuje treści w listach, tabelach i definicjach. Takie formaty łatwiej cytować w odpowiedziach. Strona bez nich ma mniejszą szansę na pojawienie się w odpowiedziach ChatGPT czy Google AIO.',fix:'Dodaj listy punktowane, tabele porównawcze lub sekcje FAQ. To formaty które AI najchętniej cytuje.'});
+  if(!d.hasAuthor&&!d.hasAuthorSchema) f.push({s:'amber',t:'Brak widocznego autora treści (E-E-A-T)',src:'html',w:'AI coraz bardziej waży wiarygodność źródła. Strona bez podpisanego autora (imię, bio, link do LinkedIn) jest mniej wiarygodna dla algorytmów AI i Google.',fix:'Dodaj podpis autora z krótką biografią i linkiem do profilu LinkedIn. Rozważ schema Person.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(d.llmsStatus==='found'?true:d.llmsStatus==='unknown'?null:false, 'Przewodnik dla AI (llms.txt)', d.llmsStatus==='unknown'?'nie udało się sprawdzić':null),
@@ -1013,6 +1038,8 @@ function buildAI(d){
     chk(d.robotsStatus==='found'?!d.claudeBlocked:null, 'Claude może czytać stronę (ClaudeBot)', d.robotsStatus!=='found'?'nie udało się sprawdzić robots.txt':d.claudeBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
     chk(d.robotsStatus==='found'?!d.perplexityBlocked:null, 'Perplexity może czytać stronę (PerplexityBot)', d.robotsStatus!=='found'?'nie udało się sprawdzić robots.txt':d.perplexityBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
     chk(!!d.hasSchema, 'Dane strukturalne dla AI (Schema.org)'),
+    chk(d.hasAuthor||d.hasAuthorSchema, 'Autor treści (E-E-A-T)', d.hasAuthorSchema?'schema Person znaleziona':d.hasAuthor?'element autora znaleziony':null),
+    chk(d.hasAEOFormats, 'Formaty przyjazne AI (listy, tabele)', d.aeoTotal>0?d.listCount+' list, '+d.tableCount+' tabel, '+d.dlCount+' definicji':null),
     chk(d.wordCount>0?(d.wordCount>200):null, 'Wystarczająca treść tekstowa dla AI', d.wordCount>0?d.wordCount+' słów':'treść ładowana przez JavaScript'),
   ]);
   return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f,cl);
@@ -1091,7 +1118,8 @@ function buildUX(d){
   if(!d.hasCTA) f.push({s:'red',t:'Nie znaleziono wezwania do działania',src:'html',w:'Strona nie ma widocznego przycisku lub linku zachęcającego do kontaktu, zakupu lub zapisu. Użytkownik nie wie co ma zrobić dalej.',fix:'Dodaj wyraźny przycisk (np. "Skontaktuj się", "Zamów", "Sprawdź ofertę") widoczny bez przewijania.'});
   if(!d.hasPhone&&!d.hasEmail) f.push({s:'amber',t:'Brak widocznych danych kontaktowych',src:'html',w:'Nie znaleźliśmy numeru telefonu ani adresu email na stronie. Klient który chce się skontaktować może zrezygnować.',fix:'Dodaj telefon i/lub email widoczny w nagłówku lub stopce strony.'});
   if(!d.hasSocial) f.push({s:'amber',t:'Brak linków do social media',src:'html',w:'Linki do profili społecznościowych budują zaufanie i dają klientom dodatkowy sposób na kontakt.',fix:'Dodaj linki do swoich profili (Facebook, LinkedIn, Instagram) w stopce.'});
-  if(!f.length) f.push({s:'green',t:'Podstawy UX wyglądają dobrze',src:'html',w:'Strona ma przyciski akcji i dane kontaktowe.',fix:null});
+  if(d.hasTrustBadges<3) f.push({s:'amber',t:`Mało sygnałów zaufania (${d.hasTrustBadges} z 6)`,src:'html',w:'Sygnały zaufania (adres, telefon, email, polityka prywatności, regulamin, social media) przekonują klienta że firma jest prawdziwa. Im więcej, tym lepiej. Google też to docenia (E-E-A-T).',fix:'Dodaj brakujące elementy: adres firmy, telefon, email, politykę prywatności, regulamin, linki do social media.'});
+  if(!f.length) f.push({s:'green',t:'Podstawy UX wyglądają dobrze',src:'html',w:'Strona ma przyciski akcji, dane kontaktowe i sygnały zaufania.',fix:null});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(d.hasCTA, 'Przycisk zachęcający do działania (CTA)', d.ctaCount>0?d.ctaCount+' znalezionych':null),
@@ -1101,6 +1129,7 @@ function buildUX(d){
     chk(d.hasSocial, 'Linki do social media', d.socialLinks.length?d.socialLinks.join(', '):null),
     chk(d.hasAbout, 'Strona "O nas" / "O firmie"'),
     chk(d.hasViewport, 'Strona działa na telefonie (responsywna)'),
+    chk(d.hasTrustBadges>=4, 'Sygnały zaufania (E-E-A-T)', d.hasTrustBadges+' z 6 elementów'),
   ]);
   return sec('🎁 UX i wiarygodność (bonus)','Czy klient Ci zaufa i skontaktuje się',worst,f,cl);
 }
@@ -1125,6 +1154,10 @@ function buildGood(d){
   if(d.hasSocial) g.push('Linki do social media: '+d.socialLinks.join(', '));
   if(d.isHttps) g.push('Bezpieczne połączenie (HTTPS)');
   if(d.hasViewport) g.push('Strona dostosowana do telefonów');
+  if(d.hasAuthor||d.hasAuthorSchema) g.push('Autor treści widoczny (E-E-A-T)');
+  if(d.hasAEOFormats) g.push('Formaty przyjazne AI: '+d.listCount+' list, '+d.tableCount+' tabel');
+  if(d.textToHtmlRatio>=25) g.push('Dobra gęstość treści: '+d.textToHtmlRatio+'%');
+  if(d.hasTrustBadges>=4) g.push('Silne sygnały zaufania ('+d.hasTrustBadges+'/6)');
   if(!g.length) return '';
   return `<div class="section">
     <div class="section-header">
