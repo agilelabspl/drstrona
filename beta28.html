@@ -368,7 +368,7 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
     <span class="check-pill">Indeksowanie</span>
     <span class="check-pill">Struktura techniczna</span>
     <span class="check-pill">RODO i prywatność</span>
-    <span class="check-pill">UX i wiarygodność 🎁</span>
+    <span class="check-pill">UX i wiarygodność</span>
   </div>
 </div>
 
@@ -1353,7 +1353,7 @@ function buildUX(d){
     chk(d.hasViewport, 'Strona działa na telefonie (responsywna)'),
     chk(d.hasTrustBadges>=4, 'Sygnały zaufania (E-E-A-T)', d.hasTrustBadges+' z 6 elementów'),
   ]);
-  return sec('🎁 UX i wiarygodność (bonus)','Czy klient Ci zaufa i skontaktuje się',worst,f,cl);
+  return sec('UX i wiarygodność (bonus)','Czy klient Ci zaufa i skontaktuje się',worst,f,cl);
 }
 
 function buildGood(d){
