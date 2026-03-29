@@ -230,7 +230,7 @@ h1 em{font-style:italic;color:var(--accent)}
 .disclaimer{font-size:13px;color:var(--ink3);border-top:1px solid var(--border);padding-top:16px;margin-top:8px;line-height:1.7}
 
 /* ── CONTENT GATE ── */
-.gate-wrap{position:relative;margin-top:-20px;padding-top:0}
+.gate-wrap{position:relative;margin-top:0;padding-top:0}
 .gate-blur{filter:blur(6px);pointer-events:none;user-select:none;opacity:0.4;max-height:200px;overflow:hidden}
 .gate-overlay{
   position:relative;z-index:10;
@@ -947,7 +947,9 @@ async function runAnalysis(url){
   // Indeksowanie: sitemap, robots
   if(R.hasNoindex) indexScore-=50;
   if(R.sitemapStatus==='missing') indexScore-=25;
+  else if(R.sitemapStatus==='unknown') indexScore-=10;
   if(R.robotsStatus==='missing') indexScore-=20;
+  else if(R.robotsStatus==='unknown') indexScore-=10;
   if(R.hasRobots&&!R.robotsSitemap) indexScore-=15;
   if(R.hasRedirects&&R.redirectCount>=3) indexScore-=10;
   if(R.canonicalConflict) indexScore-=15;
@@ -958,9 +960,11 @@ async function runAnalysis(url){
   if(R.imgsNoAlt>0) structScore-=20;
   // AI Ready
   if(R.llmsStatus==='missing') aiScore-=30;
+  else if(R.llmsStatus==='unknown') aiScore-=10;
   if(R.gptBlocked) aiScore-=25;
   if(!R.hasSchema) aiScore-=15;
   if(R.robotsStatus==='missing') aiScore-=10;
+  else if(R.robotsStatus==='unknown') aiScore-=5;
   if(!R.hasAEOFormats) aiScore-=10;
   if(!R.hasAuthor&&!R.hasAuthorSchema) aiScore-=10;
   // RODO
