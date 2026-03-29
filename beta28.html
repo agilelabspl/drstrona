@@ -807,6 +807,34 @@ async function runAnalysis(url){
   R.hasAEOFormats=(R.listCount+R.tableCount+R.dlCount)>0;
   R.aeoTotal=R.listCount+R.tableCount+R.dlCount;
 
+  // Empty links/buttons (no text, no aria-label, no title)
+  const emptyLinks=[...doc.querySelectorAll('a')].filter(a=>{
+    const txt=(a.textContent||'').trim();
+    const aria=a.getAttribute('aria-label')||'';
+    const title=a.getAttribute('title')||'';
+    const img=a.querySelector('img[alt]');
+    return !txt&&!aria&&!title&&!img;
+  });
+  R.emptyLinks=emptyLinks.length;
+  R.hasEmptyLinks=R.emptyLinks>0;
+
+  // Generic anchor text ("kliknij tutaj", "czytaj więcej", "here", etc.)
+  const genericAnchors=['kliknij tutaj','kliknij','czytaj więcej','więcej','tutaj','here','click here','read more','link','dowiedz się więcej'];
+  const genericLinks=[...doc.querySelectorAll('a')].filter(a=>{
+    const txt=(a.textContent||'').toLowerCase().trim();
+    return genericAnchors.includes(txt);
+  });
+  R.genericLinks=genericLinks.length;
+  R.hasGenericLinks=R.genericLinks>0;
+
+  // Content freshness signals (dateModified in schema, article:modified_time, <time>)
+  R.hasDateModified=false;
+  R.freshnessSource=null;
+  if(doc.querySelector('meta[property="article:modified_time"]')){ R.hasDateModified=true; R.freshnessSource='meta article:modified_time'; }
+  else if(doc.querySelector('meta[property="article:published_time"]')){ R.hasDateModified=true; R.freshnessSource='meta article:published_time'; }
+  else if(R.schemas.some(s=>s.dateModified||(Array.isArray(s['@graph'])&&s['@graph'].some(g=>g.dateModified)))){ R.hasDateModified=true; R.freshnessSource='schema dateModified'; }
+  else if(doc.querySelector('time[datetime]')){ R.hasDateModified=true; R.freshnessSource='element <time>'; }
+
   // Text-to-HTML ratio
   const textLen=(doc.body?.textContent||'').replace(/\s+/g,' ').trim().length;
   R.textToHtmlRatio=R.htmlLength>0?Math.round((textLen/R.htmlLength)*100):0;
@@ -1092,6 +1120,7 @@ function buildSEO(d){
   if(!d.metaDesc) f.push({s:'red',t:'Brak opisu strony dla Google',src:'html',w:'Google sam wybierze losowy fragment tekstu do wyświetlenia w wynikach zamiast zachęcającego opisu. Tracisz kontrolę nad pierwszym wrażeniem.',fix:'Dodaj meta description (150-160 znaków): co robisz, dla kogo, jaka korzyść.'});
   if(d.duplicateDesc) f.push({s:'amber',t:`Zduplikowany meta description (${d.duplicateDescCount}×)`,src:'html',w:'W kodzie strony znaleziono więcej niż jeden tag meta description. Google może wybrać niewłaściwy lub zignorować oba. Powinien być dokładnie jeden.',fix:'Usuń duplikat meta description. Zostaw tylko jeden tag z najlepszym opisem.'});
   if(!d.canonical) f.push({s:'amber',t:'Nie wskazano głównego adresu strony',src:'html',w:'Bez wskazania głównego adresu (canonical) Google może traktować różne wersje URL (z www, bez www, z ukośnikiem) jako osobne strony. To rozprasza "siłę SEO".',fix:'Dodaj canonical URL wskazujący na główny adres strony.'});
+  if(d.hasGenericLinks) f.push({s:'amber',t:`${d.genericLinks} linków z ogólnikowym tekstem`,src:'html',w:'Linki z tekstem typu "kliknij tutaj", "czytaj więcej" czy "tutaj" marnują potencjał SEO. Google czyta tekst linku żeby zrozumieć na co wskazuje. Ogólnikowy tekst nic mu nie mówi.',fix:'Zamień "kliknij tutaj" na konkretny opis: "zobacz cennik usług", "przeczytaj poradnik SEO". Tekst linka powinien opisywać stronę docelową.'});
   if(!f.length) f.push({s:'green',t:'SEO podstawy wyglądają dobrze',src:'html',w:'Tytuł, opis i canonical są na miejscu.',fix:null});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
@@ -1104,6 +1133,7 @@ function buildSEO(d){
     chk(!!d.hasOG, 'Podgląd w social media (Open Graph)', d.ogImage?'Obrazek podglądu: tak':'Brak obrazka podglądu'),
     chk(!!d.lang, 'Język strony ustawiony', d.lang?'Język: '+esc(d.lang):null),
     chk(d.wordCount>0?(d.wordCount>200):null, 'Wystarczająca ilość treści', d.wordCount>0?d.wordCount+' słów'+(d.wordCount<200?' (mało, Google preferuje min. 300)':''):'treść ładowana przez JavaScript'),
+    chk(!d.hasGenericLinks, 'Linki z konkretnym tekstem', d.hasGenericLinks?d.genericLinks+' z ogólnikowym tekstem ("kliknij tutaj" itp.)':null),
   ]);
   return sec('SEO',d.title?`"${esc(d.title.substring(0,50))}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f,cl);
 }
@@ -1146,6 +1176,7 @@ function buildStructure(d){
   if(d.brokenHeadingHierarchy) f.push({s:'amber',t:'Przeskoczona hierarchia nagłówków (H1→H3 bez H2)',src:'html',w:'Strona ma nagłówek H1 i H3, ale nie ma H2. To jak książka z rozdziałami i podpodrozdziałami, ale bez podrozdziałów. Utrudnia nawigację i osłabia strukturę SEO.',fix:'Dodaj nagłówki H2 między H1 a H3. Hierarchia powinna być: H1 → H2 → H3.'});
   if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez opisu`,src:'html',w:'Obrazki bez opisu są niewidoczne dla Google Images i czytników ekranu (używanych przez osoby niewidome). Tracisz dodatkowe źródło ruchu z wyszukiwarki grafik.',fix:'Dodaj opis (alt) do każdego obrazka w ustawieniach CMS.'});
   if(d.textToHtmlRatio<10) f.push({s:'amber',t:`Mało treści w kodzie strony (${d.textToHtmlRatio}%)`,src:'html',w:'Stosunek tekstu do kodu HTML jest niski (poniżej 10%). Oznacza to że strona ma dużo kodu a mało treści. Google i AI preferują strony bogate w treść. Niska gęstość tekstu może osłabić widoczność w wynikach wyszukiwania.',fix:'Dodaj więcej treści tekstowej (opisy, artykuły, FAQ). Rozważ usunięcie nadmiarowego kodu lub inline CSS/JS.'});
+  if(d.hasEmptyLinks) f.push({s:'amber',t:`${d.emptyLinks} pustych linków (bez tekstu)`,src:'html',w:'Na stronie są linki bez widocznego tekstu, opisu (aria-label) ani obrazka z opisem. Google nie wie gdzie prowadzą, użytkownicy nie wiedzą co kliknąć, a czytniki ekranu pomijają je.',fix:'Dodaj tekst do każdego linka lub atrybut aria-label opisujący dokąd prowadzi.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(d.hasSchema?!d.hasSchemaErrors:false, 'Dane o firmie dla Google (Schema.org)', d.schemaTypes.length?'Typy: '+d.schemaTypes.join(', ')+(d.hasSchemaErrors?' · braki: '+d.schemaErrors.length:''):null),
@@ -1156,6 +1187,7 @@ function buildStructure(d){
     chk(d.totalImages>0?d.imgsNoAlt===0:true, 'Wszystkie obrazki mają opis (alt)', d.totalImages>0?d.imgsNoAlt+' bez opisu z '+d.totalImages:'brak obrazków'),
     chk(d.totalImages>0, 'Obrazki na stronie', d.totalImages+' znalezionych'),
     chk(d.textToHtmlRatio>=10, 'Gęstość treści (text-to-HTML ratio)', d.textToHtmlRatio+'% '+(d.textToHtmlRatio>=25?'(dobra)':d.textToHtmlRatio>=10?'(OK)':'(niska)')),
+    chk(!d.hasEmptyLinks, 'Brak pustych linków', d.hasEmptyLinks?d.emptyLinks+' bez tekstu':null),
   ]);
   return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f,cl);
 }
@@ -1197,6 +1229,7 @@ function buildAI(d){
   if(!d.hasSchema) f.push({s:'amber',t:'AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenty AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony głównej.'});
   if(!d.hasAEOFormats) f.push({s:'amber',t:'Brak formatów przyjaznych AI (listy, tabele)',src:'html',w:'AI preferuje treści w listach, tabelach i definicjach. Takie formaty łatwiej cytować w odpowiedziach. Strona bez nich ma mniejszą szansę na pojawienie się w odpowiedziach ChatGPT czy Google AIO.',fix:'Dodaj listy punktowane, tabele porównawcze lub sekcje FAQ. To formaty które AI najchętniej cytuje.'});
   if(!d.hasAuthor&&!d.hasAuthorSchema) f.push({s:'amber',t:'Brak widocznego autora treści (E-E-A-T)',src:'html',w:'AI coraz bardziej waży wiarygodność źródła. Strona bez podpisanego autora (imię, bio, link do LinkedIn) jest mniej wiarygodna dla algorytmów AI i Google.',fix:'Dodaj podpis autora z krótką biografią i linkiem do profilu LinkedIn. Rozważ schema Person.'});
+  if(!d.hasDateModified) f.push({s:'amber',t:'AI nie wie kiedy treść była aktualizowana',src:'html',w:'Na stronie nie znaleziono daty publikacji ani ostatniej aktualizacji. AI i Google premiują świeże treści. Bez daty Twoja strona wygląda na potencjalnie nieaktualną.',fix:'Dodaj datę aktualizacji: element <time datetime="...">, meta tag article:modified_time, lub dateModified w schema.org.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(d.llmsStatus==='found'?true:d.llmsStatus==='unknown'?null:false, 'Przewodnik dla AI (llms.txt)', d.llmsStatus==='unknown'?'nie udało się sprawdzić':null),
@@ -1207,6 +1240,7 @@ function buildAI(d){
     chk(d.hasAuthor||d.hasAuthorSchema, 'Autor treści (E-E-A-T)', d.hasAuthorSchema?'schema Person znaleziona':d.hasAuthor?'element autora znaleziony':null),
     chk(d.hasAEOFormats, 'Formaty przyjazne AI (listy, tabele)', d.aeoTotal>0?d.listCount+' list, '+d.tableCount+' tabel, '+d.dlCount+' definicji':null),
     chk(d.wordCount>0?(d.wordCount>200):null, 'Wystarczająca treść tekstowa dla AI', d.wordCount>0?d.wordCount+' słów':'treść ładowana przez JavaScript'),
+    chk(d.hasDateModified, 'Świeżość treści (data aktualizacji)', d.hasDateModified?'znaleziono: '+d.freshnessSource:'brak daty publikacji/aktualizacji'),
   ]);
   return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f,cl);
 }
