@@ -567,6 +567,7 @@ async function runAnalysis(url){
   R.redirectChain=[];
   R.finalUrl=url;
   R.xRobotsTag='';
+  R.hstsHeader='';
   let gotMeta=false;
   try{
     const ctrl=new AbortController();
@@ -580,6 +581,7 @@ async function runAnalysis(url){
         try{ R.redirectChain=JSON.parse(res.headers.get('X-Proxy-Chain')||'[]'); }catch{}
         R.finalUrl=res.headers.get('X-Proxy-Final-Url')||url;
         R.xRobotsTag=res.headers.get('X-Robots-Tag')||'';
+        R.hstsHeader=res.headers.get('X-Proxy-HSTS')||'';
         gotMeta=true;
       }
     }
@@ -628,6 +630,46 @@ async function runAnalysis(url){
   // redirect chain
   R.hasRedirects=R.redirectChain.length>1;
   R.redirectCount=R.redirectChain.length-1;
+
+  // HSTS
+  R.hasHSTS=!!R.hstsHeader;
+
+  // structured data validation
+  R.schemaErrors=[];
+  R.schemas.forEach(s=>{
+    const t=s['@type'];
+    if(t==='Organization'||t==='LocalBusiness'){
+      if(!s.name) R.schemaErrors.push(t+': brak "name"');
+      if(!s.url) R.schemaErrors.push(t+': brak "url"');
+    }
+    if(t==='Person'){
+      if(!s.name) R.schemaErrors.push('Person: brak "name"');
+    }
+    if(t==='FAQPage'){
+      if(!s.mainEntity||!s.mainEntity.length) R.schemaErrors.push('FAQPage: brak "mainEntity"');
+    }
+    if(t==='Product'){
+      if(!s.name) R.schemaErrors.push('Product: brak "name"');
+    }
+    if(Array.isArray(s['@graph'])){
+      s['@graph'].forEach(g=>{
+        const gt=g['@type'];
+        if((gt==='Organization'||gt==='LocalBusiness')&&!g.name) R.schemaErrors.push(gt+': brak "name"');
+        if(gt==='Person'&&!g.name) R.schemaErrors.push('Person: brak "name"');
+        if(gt==='FAQPage'&&(!g.mainEntity||!g.mainEntity.length)) R.schemaErrors.push('FAQPage: brak "mainEntity"');
+      });
+    }
+  });
+  R.hasSchemaErrors=R.schemaErrors.length>0;
+
+  // unminified JS/CSS
+  const scripts=[...doc.querySelectorAll('script[src]')];
+  const styles=[...doc.querySelectorAll('link[rel="stylesheet"]')];
+  R.unminifiedJS=scripts.filter(s=>{const src=s.getAttribute('src')||'';return src.endsWith('.js')&&!src.includes('.min.')&&!src.includes('min.js');}).length;
+  R.unminifiedCSS=styles.filter(s=>{const href=s.getAttribute('href')||'';return href.endsWith('.css')&&!href.includes('.min.')&&!href.includes('min.css');}).length;
+  R.hasUnminified=(R.unminifiedJS+R.unminifiedCSS)>0;
+  R.totalJS=scripts.length;
+  R.totalCSS=styles.length;
 
   showStep(2); await delay(200);
   const h1s=[...doc.querySelectorAll('h1')];
@@ -1006,6 +1048,7 @@ function buildIndex(d){
     chk(!d.canonicalConflict, 'Canonical URL poprawny', d.canonical?esc(d.canonical):null),
     chk(!d.hasRedirects||d.redirectCount<2, 'Brak łańcucha przekierowań', d.hasRedirects?d.redirectCount+' przekierowań':null),
     chk(d.isHttps, 'Bezpieczne połączenie (HTTPS)'),
+    chk(d.isHttps?d.hasHSTS:null, 'Wymuszenie HTTPS (HSTS)', d.hasHSTS?'aktywne':d.isHttps?'brak nagłówka Strict-Transport-Security':null),
     chk(d.internalLinks>3, 'Linki wewnętrzne', d.internalLinks+' linków wewnętrznych'),
   ]);
   return sec('Indeksowanie','Czy Google widzi Twoje podstrony',worst,f,cl);
@@ -1014,6 +1057,7 @@ function buildIndex(d){
 function buildStructure(d){
   const f=[];
   if(!d.hasSchema) f.push({s:'amber',t:'Google nie rozumie czym się zajmujesz',src:'html',w:'Brak danych strukturalnych. Google i asystenci AI nie wiedzą czym jest Twoja firma, co oferujesz i gdzie jesteś. Tracisz "rich results" (gwiazdki, FAQ, logo) w wynikach wyszukiwania.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony.'});
+  else if(d.hasSchemaErrors) f.push({s:'amber',t:'Dane strukturalne mają braki',src:'html',w:'Schema.org jest na stronie, ale brakuje wymaganych pól: '+esc(d.schemaErrors.join(', '))+'. Niekompletne dane mogą być ignorowane przez Google.',fix:'Uzupełnij brakujące pola w danych strukturalnych. Sprawdź poprawność: search.google.com/test/rich-results'});
   else f.push({s:'green',t:'Google rozumie czym się zajmujesz',src:'html',w:'Dane strukturalne są na miejscu. Wyszukiwarki i AI wiedzą czym jest Twoja firma.',fix:null});
   if(d.h1Count===0) f.push({s:'red',t:'Strona nie ma głównego nagłówka',src:'html',w:'Główny nagłówek (H1) mówi Google i użytkownikom o czym jest ta strona. Jego brak osłabia widoczność w wyszukiwarce.',fix:'Dodaj jeden główny nagłówek z frazą opisującą Twoją działalność.'});
   else if(d.h1Count>1) f.push({s:'amber',t:`Za dużo głównych nagłówków (${d.h1Count})`,src:'html',w:'Na stronie powinien być dokładnie jeden główny nagłówek. Wiele nagłówków H1 dezorientuje wyszukiwarki.',fix:'Zostaw jeden główny nagłówek, pozostałe zamień na podtytuły.'});
@@ -1022,7 +1066,7 @@ function buildStructure(d){
   if(d.textToHtmlRatio<10) f.push({s:'amber',t:`Mało treści w kodzie strony (${d.textToHtmlRatio}%)`,src:'html',w:'Stosunek tekstu do kodu HTML jest niski (poniżej 10%). Oznacza to że strona ma dużo kodu a mało treści. Google i AI preferują strony bogate w treść. Niska gęstość tekstu może osłabić widoczność w wynikach wyszukiwania.',fix:'Dodaj więcej treści tekstowej (opisy, artykuły, FAQ). Rozważ usunięcie nadmiarowego kodu lub inline CSS/JS.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
-    chk(!!d.hasSchema, 'Dane o firmie dla Google (Schema.org)', d.schemaTypes.length?'Typy: '+d.schemaTypes.join(', '):null),
+    chk(d.hasSchema?!d.hasSchemaErrors:false, 'Dane o firmie dla Google (Schema.org)', d.schemaTypes.length?'Typy: '+d.schemaTypes.join(', ')+(d.hasSchemaErrors?' · braki: '+d.schemaErrors.length:''):null),
     chk(d.h1Count===1, 'Jeden główny nagłówek (H1)'),
     chk(d.h2Count>0, 'Podtytuły (H2)', d.h2Count+' znalezionych'),
     chk(d.h3Count>0, 'Podpodtytuły (H3)', d.h3Count+' znalezionych'),
@@ -1044,6 +1088,7 @@ function buildSpeed(d){
   } else {
     f.push({s:'green',t:`Wynik mobilny: ${d.mobileScore}/100 — dobry wynik`,src:'live',w:`Strona ładuje się szybko na urządzeniach mobilnych.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:null});
   }
+  if(d.hasUnminified) f.push({s:'amber',t:`Niezminifikowane pliki: ${d.unminifiedJS} JS, ${d.unminifiedCSS} CSS`,src:'html',w:'Pliki JavaScript i CSS nie są zminifikowane (skompresowane). Minifikacja usuwa zbędne spacje i komentarze, zmniejszając rozmiar plików o 20-40%. To przyspiesza ładowanie strony.',fix:'Włącz minifikację w CMS lub narzędziu do budowania. WordPress: wtyczka Autoptimize lub WP Rocket.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(d.mobileScore!=null?d.mobileScore>=80:null, 'Szybkość na telefonie (PageSpeed mobile)', d.mobileScore!=null?d.mobileScore+'/100':null),
@@ -1051,6 +1096,7 @@ function buildSpeed(d){
     chk(d.cls?parseFloat(d.cls)<=0.1:null, 'Stabilność layoutu (Cumulative Layout Shift)', d.cls||'brak danych'),
     chk(d.fcp?parseFloat(d.fcp)<=1.8:null, 'Pierwsze wyświetlenie (First Contentful Paint)', d.fcp||'brak danych'),
     chk(d.tbt?parseFloat(d.tbt)<=200:null, 'Blokowanie interakcji (Total Blocking Time)', d.tbt||'brak danych'),
+    chk(!d.hasUnminified, 'Pliki JS/CSS zminifikowane', d.totalJS+' skryptów, '+d.totalCSS+' arkuszy CSS'+(d.hasUnminified?' ('+d.unminifiedJS+' JS + '+d.unminifiedCSS+' CSS bez minifikacji)':'')),
   ]);
   return sec('Szybkość strony',d.lcp?`LCP: ${d.lcp}${d.cls?' · CLS: '+d.cls:''}`:d.mobileScore!=null?`Score: ${d.mobileScore}/100`:'Google PageSpeed',worst,f,cl);
 }
@@ -1182,6 +1228,9 @@ function buildGood(d){
   if(d.canonical&&!d.canonicalConflict) g.push('Główny adres strony ustawiony poprawnie');
   if(!d.hasNoindex) g.push('Strona widoczna dla Google (brak noindex)');
   if(!d.hasRedirects) g.push('Brak zbędnych przekierowań');
+  if(d.hasHSTS) g.push('HSTS aktywne (wymuszenie HTTPS)');
+  if(!d.hasUnminified&&d.totalJS>0) g.push('Pliki JS/CSS zminifikowane');
+  if(d.hasSchema&&!d.hasSchemaErrors) g.push('Dane strukturalne poprawne');
   if(d.hasTerms) g.push('Regulamin dostępny');
   if(d.hasOG) g.push('Podgląd w social media (Open Graph) działa');
   if(d.hasCTA) g.push('Przyciski zachęcające do działania znalezione');
