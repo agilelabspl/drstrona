@@ -673,6 +673,37 @@ async function runAnalysis(url){
   R.totalJS=scripts.length;
   R.totalCSS=styles.length;
 
+  // lazy loading on images
+  const imgsAll=[...doc.querySelectorAll('img')];
+  R.imgsNoLazy=imgsAll.filter(i=>!i.hasAttribute('loading')).length;
+  R.hasLazyLoading=R.imgsNoLazy===0||R.totalImages===0;
+
+  // render-blocking scripts (no defer/async)
+  const inlineOrExternal=[...doc.querySelectorAll('script:not([type="application/ld+json"]):not([type="application/json"])')];
+  R.blockingScripts=inlineOrExternal.filter(s=>{
+    if(!s.hasAttribute('src')) return false;
+    return !s.hasAttribute('defer')&&!s.hasAttribute('async');
+  }).length;
+  R.hasBlockingScripts=R.blockingScripts>0;
+
+  // Google Fonts from external server (GDPR issue)
+  R.hasExternalGoogleFonts=!!doc.querySelector('link[href*="fonts.googleapis.com"]')||html.includes('fonts.googleapis.com');
+
+  // mixed content (http resources on https page)
+  R.mixedContent=0;
+  if(R.isHttps){
+    const srcs=[...doc.querySelectorAll('[src^="http://"],[href^="http://"]')].filter(el=>{
+      const tag=el.tagName.toLowerCase();
+      return tag==='script'||tag==='link'||tag==='img'||tag==='iframe'||tag==='video'||tag==='audio';
+    });
+    R.mixedContent=srcs.length;
+  }
+  R.hasMixedContent=R.mixedContent>0;
+
+  // heading hierarchy (H1→H3 without H2)
+  R.brokenHeadingHierarchy=false;
+  if(R.h1Count>0&&R.h3Count>0&&R.h2Count===0) R.brokenHeadingHierarchy=true;
+
   showStep(2); await delay(200);
   const h1s=[...doc.querySelectorAll('h1')];
   const h2s=[...doc.querySelectorAll('h2')];
@@ -1088,6 +1119,7 @@ function buildStructure(d){
   if(d.h1Count===0) f.push({s:'red',t:'Strona nie ma głównego nagłówka',src:'html',w:'Główny nagłówek (H1) mówi Google i użytkownikom o czym jest ta strona. Jego brak osłabia widoczność w wyszukiwarce.',fix:'Dodaj jeden główny nagłówek z frazą opisującą Twoją działalność.'});
   else if(d.h1Count>1) f.push({s:'amber',t:`Za dużo głównych nagłówków (${d.h1Count})`,src:'html',w:'Na stronie powinien być dokładnie jeden główny nagłówek. Wiele nagłówków H1 dezorientuje wyszukiwarki.',fix:'Zostaw jeden główny nagłówek, pozostałe zamień na podtytuły.'});
   else f.push({s:'green',t:`Główny nagłówek poprawny: "${esc((d.h1Text||'').substring(0,50))}"`,src:'html',w:'Strona ma jeden, jasny nagłówek główny.',fix:null});
+  if(d.brokenHeadingHierarchy) f.push({s:'amber',t:'Przeskoczona hierarchia nagłówków (H1→H3 bez H2)',src:'html',w:'Strona ma nagłówek H1 i H3, ale nie ma H2. To jak książka z rozdziałami i podpodrozdziałami, ale bez podrozdziałów. Utrudnia nawigację i osłabia strukturę SEO.',fix:'Dodaj nagłówki H2 między H1 a H3. Hierarchia powinna być: H1 → H2 → H3.'});
   if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez opisu`,src:'html',w:'Obrazki bez opisu są niewidoczne dla Google Images i czytników ekranu (używanych przez osoby niewidome). Tracisz dodatkowe źródło ruchu z wyszukiwarki grafik.',fix:'Dodaj opis (alt) do każdego obrazka w ustawieniach CMS.'});
   if(d.textToHtmlRatio<10) f.push({s:'amber',t:`Mało treści w kodzie strony (${d.textToHtmlRatio}%)`,src:'html',w:'Stosunek tekstu do kodu HTML jest niski (poniżej 10%). Oznacza to że strona ma dużo kodu a mało treści. Google i AI preferują strony bogate w treść. Niska gęstość tekstu może osłabić widoczność w wynikach wyszukiwania.',fix:'Dodaj więcej treści tekstowej (opisy, artykuły, FAQ). Rozważ usunięcie nadmiarowego kodu lub inline CSS/JS.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
@@ -1096,6 +1128,7 @@ function buildStructure(d){
     chk(d.h1Count===1, 'Jeden główny nagłówek (H1)'),
     chk(d.h2Count>0, 'Podtytuły (H2)', d.h2Count+' znalezionych'),
     chk(d.h3Count>0, 'Podpodtytuły (H3)', d.h3Count+' znalezionych'),
+    chk(!d.brokenHeadingHierarchy, 'Poprawna hierarchia nagłówków', d.brokenHeadingHierarchy?'H1→H3 bez H2':null),
     chk(d.totalImages>0?d.imgsNoAlt===0:true, 'Wszystkie obrazki mają opis (alt)', d.totalImages>0?d.imgsNoAlt+' bez opisu z '+d.totalImages:'brak obrazków'),
     chk(d.totalImages>0, 'Obrazki na stronie', d.totalImages+' znalezionych'),
     chk(d.textToHtmlRatio>=10, 'Gęstość treści (text-to-HTML ratio)', d.textToHtmlRatio+'% '+(d.textToHtmlRatio>=25?'(dobra)':d.textToHtmlRatio>=10?'(OK)':'(niska)')),
@@ -1115,6 +1148,8 @@ function buildSpeed(d){
     f.push({s:'green',t:`Wynik mobilny: ${d.mobileScore}/100 — dobry wynik`,src:'live',w:`Strona ładuje się szybko na urządzeniach mobilnych.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:null});
   }
   if(d.hasUnminified) f.push({s:'amber',t:`Niezminifikowane pliki: ${d.unminifiedJS} JS, ${d.unminifiedCSS} CSS`,src:'html',w:'Pliki JavaScript i CSS nie są zminifikowane (skompresowane). Minifikacja usuwa zbędne spacje i komentarze, zmniejszając rozmiar plików o 20-40%. To przyspiesza ładowanie strony.',fix:'Włącz minifikację w CMS lub narzędziu do budowania. WordPress: wtyczka Autoptimize lub WP Rocket.'});
+  if(d.hasBlockingScripts) f.push({s:'amber',t:`${d.blockingScripts} skryptów blokuje ładowanie strony`,src:'html',w:'Skrypty bez atrybutu defer lub async blokują rendering strony. Przeglądarka musi pobrać i wykonać skrypt zanim pokaże resztę treści. To spowalnia ładowanie.',fix:'Dodaj atrybut defer (lub async) do tagów script. Defer ładuje skrypt równolegle i wykonuje po sparsowaniu HTML.'});
+  if(d.totalImages>3&&!d.hasLazyLoading) f.push({s:'amber',t:`${d.imgsNoLazy} z ${d.totalImages} obrazków bez lazy loading`,src:'html',w:'Obrazki bez atrybutu loading="lazy" ładują się wszystkie naraz, nawet te niewidoczne na ekranie. To spowalnia pierwsze wyświetlenie strony i zużywa transfer użytkownika.',fix:'Dodaj loading="lazy" do obrazków poniżej pierwszego ekranu. Obrazki w nagłówku (hero) zostaw bez lazy.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(d.mobileScore!=null?d.mobileScore>=80:null, 'Szybkość na telefonie (PageSpeed mobile)', d.mobileScore!=null?d.mobileScore+'/100':null),
@@ -1123,6 +1158,8 @@ function buildSpeed(d){
     chk(d.fcp?parseFloat(d.fcp)<=1.8:null, 'Pierwsze wyświetlenie (First Contentful Paint)', d.fcp||'brak danych'),
     chk(d.tbt?parseFloat(d.tbt)<=200:null, 'Blokowanie interakcji (Total Blocking Time)', d.tbt||'brak danych'),
     chk(!d.hasUnminified, 'Pliki JS/CSS zminifikowane', d.totalJS+' skryptów, '+d.totalCSS+' arkuszy CSS'+(d.hasUnminified?' ('+d.unminifiedJS+' JS + '+d.unminifiedCSS+' CSS bez minifikacji)':'')),
+    chk(!d.hasBlockingScripts, 'Skrypty nie blokują renderowania', d.hasBlockingScripts?d.blockingScripts+' bez defer/async':null),
+    chk(d.totalImages<=3||d.hasLazyLoading, 'Lazy loading na obrazkach', d.totalImages>0?d.imgsNoLazy+' z '+d.totalImages+' bez loading="lazy"':null),
   ]);
   return sec('Szybkość strony',d.lcp?`LCP: ${d.lcp}${d.cls?' · CLS: '+d.cls:''}`:d.mobileScore!=null?`Score: ${d.mobileScore}/100`:'Google PageSpeed',worst,f,cl);
 }
@@ -1163,6 +1200,8 @@ function buildPrivacy(d){
   if(trackers.length&&!d.hasCookieBanner) f.push({s:'red',t:`Trackery bez banera cookie: ${trackers.join(', ')}`,src:'html',w:'Na stronie są narzędzia śledzące użytkowników, ale nie znaleźliśmy banera cookie. Według RODO użytkownik musi wyrazić zgodę zanim te narzędzia zaczną działać.',fix:'Dodaj baner cookie (np. Cookiebot, CookieYes) który blokuje trackery do momentu wyrażenia zgody.'});
   else if(trackers.length) f.push({s:'green',t:`Trackery wykryte, baner cookie obecny: ${trackers.join(', ')}`,src:'html',w:'Znaleźliśmy narzędzia analityczne i baner cookie. Upewnij się że trackery uruchamiają się dopiero po wyrażeniu zgody przez użytkownika.',fix:null});
   if(d.hasForms&&!d.formHasConsent) f.push({s:'amber',t:'Formularz bez widocznego checkboxa zgody',src:'html',w:'Jeśli formularz zbiera dane do marketingu, wymagana jest oddzielna zgoda użytkownika.',fix:'Dodaj checkbox z tekstem zgody marketingowej oddzielony od zgody na regulamin.'});
+  if(d.hasExternalGoogleFonts) f.push({s:'amber',t:'Google Fonts ładowane z serwerów Google',src:'html',w:'Strona ładuje czcionki z fonts.googleapis.com. Według wyroków sądowych w UE (m.in. niemiecki wyrok LG München, 2022) przekazywanie adresu IP użytkownika do Google bez zgody narusza RODO. Google Fonts przesyła IP do serwerów Google przy każdym załadowaniu strony.',fix:'Pobierz fonty lokalnie (self-hosting). Narzędzie: google-webfonts-helper.herokuapp.com. W WordPress: wtyczka OMGF.'});
+  if(d.hasMixedContent) f.push({s:'amber',t:`${d.mixedContent} zasobów ładowanych bez szyfrowania (HTTP)`,src:'html',w:'Na stronie HTTPS znaleźliśmy zasoby ładowane przez nieszyfrowane HTTP. Przeglądarki blokują takie zasoby (obrazki, skrypty, style) lub wyświetlają ostrzeżenie. Psuje to wygląd strony i obniża zaufanie.',fix:'Zmień wszystkie adresy zasobów z http:// na https://.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(d.hasPrivacy?true:d.wordCount>0?false:null, 'Link do polityki prywatności', !d.hasPrivacy&&d.wordCount===0?'nie udało się w pełni przeanalizować strony':null),
@@ -1173,6 +1212,8 @@ function buildPrivacy(d){
     ...(d.hasHotjar?[chk(d.hasCookieBanner, 'Hotjar za zgodą użytkownika', 'Hotjar wykryty na stronie')]:[]),
     ...(!d.hasGA&&!d.hasFB&&!d.hasHotjar?[chk(true, 'Brak trackerów zewnętrznych')]:[]),
     ...(d.hasForms?[chk(d.formHasConsent, 'Formularze z checkboxem zgody', d.formCount+' formularzy')]:[]),
+    chk(!d.hasExternalGoogleFonts, 'Google Fonts lokalnie (nie z serwerów Google)', d.hasExternalGoogleFonts?'fonts.googleapis.com wykryte':null),
+    chk(!d.hasMixedContent, 'Brak mixed content (HTTP na HTTPS)', d.hasMixedContent?d.mixedContent+' zasobów przez HTTP':null),
   ]);
   return sec('RODO i prywatność','analiza HTML · nie ocena prawna',worst,f,cl);
 }
@@ -1257,6 +1298,10 @@ function buildGood(d){
   if(d.hasHSTS) g.push('HSTS aktywne (wymuszenie HTTPS)');
   if(!d.hasUnminified&&d.totalJS>0) g.push('Pliki JS/CSS zminifikowane');
   if(d.hasSchema&&!d.hasSchemaErrors) g.push('Dane strukturalne poprawne');
+  if(!d.hasBlockingScripts&&d.totalJS>0) g.push('Skrypty nie blokują renderowania');
+  if(d.hasLazyLoading&&d.totalImages>3) g.push('Lazy loading na obrazkach');
+  if(!d.hasExternalGoogleFonts) g.push('Brak zewnętrznych Google Fonts (RODO OK)');
+  if(!d.hasMixedContent&&d.isHttps) g.push('Brak mixed content');
   if(d.hasTerms) g.push('Regulamin dostępny');
   if(d.hasOG) g.push('Podgląd w social media (Open Graph) działa');
   if(d.hasCTA) g.push('Przyciski zachęcające do działania znalezione');
