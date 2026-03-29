@@ -595,9 +595,30 @@ async function runAnalysis(url){
   }
   doc = new DOMParser().parseFromString(html,'text/html');
 
+  // JS framework detection
+  R.jsFramework=null;
+  R.isJSHeavy=false;
+  const htmlLc=html.toLowerCase();
+  if(html.includes('__NEXT_DATA__')||html.includes('_next/static')) R.jsFramework='Next.js';
+  else if(html.includes('__NUXT__')||html.includes('/_nuxt/')) R.jsFramework='Nuxt';
+  else if(doc.querySelector('#__gatsby')) R.jsFramework='Gatsby';
+  else if(doc.querySelector('[ng-app],[ng-controller]')||html.includes('ng-version')) R.jsFramework='Angular';
+  else if(html.includes('__SVELTE__')||html.includes('svelte')) R.jsFramework='Svelte';
+  else if(doc.querySelector('#app[data-v-]')||doc.querySelector('[data-v-]')||html.includes('Vue.js')||html.includes('vue.min.js')||html.includes('vue.global')) R.jsFramework='Vue';
+  else if(html.includes('react')||html.includes('_reactRoot')||doc.querySelector('[data-reactroot],[data-reactid]')) R.jsFramework='React';
+  if(!R.jsFramework){
+    const root=doc.querySelector('#root,#app,#__next');
+    const bodyChildren=doc.body?[...doc.body.children].filter(el=>el.tagName!=='SCRIPT'&&el.tagName!=='LINK'&&el.tagName!=='NOSCRIPT'):[];
+    if(root&&bodyChildren.length<=3) R.jsFramework='SPA (framework nierozpoznany)';
+  }
+  R.isJSHeavy=!!R.jsFramework;
+
   showStep(1); await delay(200);
   R.title = doc.querySelector('title')?.textContent?.trim()||null;
-  R.metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim()||null;
+  const metaDescs=[...doc.querySelectorAll('meta[name="description"]')];
+  R.metaDesc = metaDescs[0]?.getAttribute('content')?.trim()||null;
+  R.duplicateDesc = metaDescs.length>1;
+  R.duplicateDescCount = metaDescs.length;
   R.canonical = doc.querySelector('link[rel="canonical"]')?.getAttribute('href')||null;
   R.ogTitle = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')||null;
   R.ogDesc = doc.querySelector('meta[property="og:description"]')?.getAttribute('content')||null;
@@ -723,7 +744,7 @@ async function runAnalysis(url){
   R.wordCount=bodyText.split(/\s+/).filter(w=>w.length>1).length;
   R.htmlLength=html.length;
   // CTA detection — only count meaningful action buttons
-  const ctaKeywords=['kontakt','zamów','kup','zapisz','wyślij','umów','sprawdź','pobierz','ofert','cennik','demo','trial','start','zacznij','dołącz','zadzwoń','napisz','skontaktuj','dowiedz','więcej','zobacz'];
+  const ctaKeywords=['kontakt','zamów','kup','zapisz','wyślij','umów','sprawdź','pobierz','ofert','cennik','demo','trial','start','zacznij','dołącz','zadzwoń','napisz','skontaktuj','dowiedz','więcej','zobacz','przetestuj','testuj','wypróbuj','bezpłatnie','gratis','rezerwuj','subskrybuj'];
   const allBtns=[...doc.querySelectorAll('button,a[class*="btn"],a[class*="cta"],input[type="submit"]')];
   const realCTAs=allBtns.filter(el=>{
     const txt=(el.textContent||'').toLowerCase().trim();
@@ -853,14 +874,14 @@ async function runAnalysis(url){
 
   showStep(5); await delay(500);
   R.mobileScore=null;
-  for(let attempt=0;attempt<2;attempt++){
+  for(let attempt=0;attempt<3;attempt++){
     try{
       const ctrl=new AbortController();
-      const timer=setTimeout(()=>ctrl.abort(),15000);
+      const timer=setTimeout(()=>ctrl.abort(),20000);
       const psRes=await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile&key=AIzaSyB9_8AJwuTQVVHOYSj14gz0vwmLN0GHn3Y`,{signal:ctrl.signal});
       clearTimeout(timer);
       const ps=await psRes.json();
-      if(ps.error){ if(attempt===0){await delay(2000);continue;} break; }
+      if(ps.error){ if(attempt<2){await delay(3000);continue;} break; }
       R.mobileScore=ps.lighthouseResult?.categories?.performance?.score!=null?Math.round(ps.lighthouseResult.categories.performance.score*100):null;
       const a=ps.lighthouseResult?.audits||{};
       R.lcp=a['largest-contentful-paint']?.displayValue||null;
@@ -868,7 +889,7 @@ async function runAnalysis(url){
       R.fcp=a['first-contentful-paint']?.displayValue||null;
       R.tbt=a['total-blocking-time']?.displayValue||null;
       break;
-    }catch{ if(attempt===0){await delay(2000);continue;} }
+    }catch{ if(attempt<2){await delay(3000);continue;} }
   }
   R.pageSpeedUrl='https://pagespeed.web.dev/analysis?url='+encodeURIComponent(url);
 
@@ -954,8 +975,8 @@ function renderReport(d,url){
     <div class="report-header">
       <div class="report-url">${esc(d.url)} · ${d.ts}</div>
       <div class="report-title">Wyniki zdrowia Twojej strony</div>
-      <div class="report-intro">Zbadaliśmy 6 obszarów (+1 bonusowy) Twojej strony. Zapoznaj się z wynikami i receptą.</div>
-      <div class="report-meta">Analiza HTML + Google PageSpeed API · strona główna</div>
+      <div class="report-intro">Zbadaliśmy 6 obszarów (+1 bonusowy) Twojej strony. Zapoznaj się z wynikami i receptą.${d.isJSHeavy?'<br><strong style="color:var(--amber)">⚠ Wykryto framework JavaScript'+(d.jsFramework?' ('+esc(d.jsFramework)+')':'')+'. </strong>Część treści strony jest ładowana dynamicznie i może nie być widoczna w analizie HTML. Elementy oznaczone jako "brak" mogą być obecne po załadowaniu JavaScript.':''}</div>
+      <div class="report-meta">Analiza HTML + Google PageSpeed API · strona główna${d.isJSHeavy?' · wykryto: '+esc(d.jsFramework):''}</div>
     </div>
 
     <div class="summary ${sc}">
@@ -1024,7 +1045,7 @@ function renderReport(d,url){
     </div>
 
     <div class="disclaimer">
-      <strong>Jak działa badanie:</strong> Analizujemy kod HTML Twojej strony głównej oraz pobieramy dane z Google PageSpeed Insights API (w czasie rzeczywistym). Elementy ładowane wyłącznie przez JavaScript (np. baner cookie, treści dynamiczne) mogą nie być widoczne w naszej analizie. Szybkość strony mierzy Google Lighthouse. Wyniki i oceny punktowe są wskaźnikami orientacyjnymi. Badanie nie zastępuje audytu prawnego, pełnej analizy bezpieczeństwa ani eksperckiego audytu SEO.
+      <strong>Jak działa badanie:</strong> Analizujemy kod HTML Twojej strony głównej oraz pobieramy dane z Google PageSpeed Insights API (w czasie rzeczywistym). ${d.isJSHeavy?'<strong>Twoja strona używa frameworka JavaScript'+(d.jsFramework?' ('+esc(d.jsFramework)+')':'')+' — treści renderowane dynamicznie (przyciski, bannery cookie, linki w stopce) mogą nie być widoczne w analizie statycznego HTML.</strong> Elementy oznaczone "nie znaleziono w HTML" mogą być obecne po załadowaniu strony w przeglądarce. ':'Elementy ładowane wyłącznie przez JavaScript (np. baner cookie, treści dynamiczne) mogą nie być widoczne w naszej analizie. '}Szybkość strony mierzy Google Lighthouse. Wyniki i oceny punktowe są wskaźnikami orientacyjnymi. Badanie nie zastępuje audytu prawnego, pełnej analizy bezpieczeństwa ani eksperckiego audytu SEO.
     </div>`;
 
   el.scrollIntoView({behavior:'smooth'});
@@ -1071,12 +1092,14 @@ function buildSEO(d){
   if(!d.title) f.push({s:'red',t:'Brak tytułu strony',src:'html',w:'Google nie wie jak opisać Twoją stronę. Brak tytułu to jeden z najbardziej podstawowych błędów SEO.',fix:'Dodaj <title> w sekcji <head>, np. "Nazwa firmy. Co robisz, dla kogo, gdzie".'});
   else if(d.title.length>65) f.push({s:'amber',t:`Tytuł za długi (${d.title.length} znaków)`,src:'html',w:'Google obcina tytuły po ok. 60 znakach. Twój tytuł może być urwany w wynikach.',fix:'Skróć tytuł do maks. 60 znaków. Najważniejsze informacje na początku.'});
   if(!d.metaDesc) f.push({s:'red',t:'Brak opisu strony dla Google',src:'html',w:'Google sam wybierze losowy fragment tekstu do wyświetlenia w wynikach zamiast zachęcającego opisu. Tracisz kontrolę nad pierwszym wrażeniem.',fix:'Dodaj meta description (150-160 znaków): co robisz, dla kogo, jaka korzyść.'});
+  if(d.duplicateDesc) f.push({s:'amber',t:`Zduplikowany meta description (${d.duplicateDescCount}×)`,src:'html',w:'W kodzie strony znaleziono więcej niż jeden tag meta description. Google może wybrać niewłaściwy lub zignorować oba. Powinien być dokładnie jeden.',fix:'Usuń duplikat meta description. Zostaw tylko jeden tag z najlepszym opisem.'});
   if(!d.canonical) f.push({s:'amber',t:'Nie wskazano głównego adresu strony',src:'html',w:'Bez wskazania głównego adresu (canonical) Google może traktować różne wersje URL (z www, bez www, z ukośnikiem) jako osobne strony. To rozprasza "siłę SEO".',fix:'Dodaj canonical URL wskazujący na główny adres strony.'});
   if(!f.length) f.push({s:'green',t:'SEO podstawy wyglądają dobrze',src:'html',w:'Tytuł, opis i canonical są na miejscu.',fix:null});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
     chk(!!d.title, 'Tytuł strony (title tag)', d.title?d.titleLength+' znaków: "'+esc(d.title.substring(0,60))+(d.title.length>60?'…':'')+'"':null),
-    chk(!!d.metaDesc, 'Opis strony dla Google (meta description)', d.metaDesc?d.descLength+' znaków':null),
+    chk(!!d.metaDesc, 'Opis strony dla Google (meta description)', d.metaDesc?d.descLength+' znaków'+(d.duplicateDesc?' ⚠ znaleziono duplikat!':''):null),
+    chk(!d.duplicateDesc, 'Jeden meta description', d.duplicateDesc?d.duplicateDescCount+' znalezionych (powinien być 1)':null),
     chk(!!d.canonical, 'Główny adres strony (canonical URL)'),
     chk(d.h1Count===1, 'Jeden główny nagłówek (H1)', d.h1Text?'"'+esc(d.h1Text.substring(0,60))+'"':null),
     chk(d.h2Count>0, 'Podtytuły na stronie (H2)', d.h2Count+' znalezionych'),
@@ -1191,16 +1214,18 @@ function buildAI(d){
 }
 
 function buildPrivacy(d){
+  const js=d.isJSHeavy;
+  const jsNote=js?' Strona używa frameworka JS — ten element może być ładowany dynamicznie i obecny po załadowaniu strony w przeglądarce.':'';
   const f=[];
-  if(!d.hasPrivacy) f.push({s:'amber',t:'Nie znaleziono linku do polityki prywatności',src:'html',w:'Nie znaleźliśmy linku do polityki prywatności w HTML strony. Jeśli link jest dodawany przez JavaScript (np. w banerze cookie), może być obecny ale niewidoczny dla naszej analizy. Polityka prywatności jest wymagana gdy strona zbiera jakiekolwiek dane.',fix:'Upewnij się że link do polityki prywatności jest widoczny w stopce strony (bezpośrednio w HTML, nie tylko w JS).'});
+  if(!d.hasPrivacy) f.push({s:js?'amber':'amber',t:'Nie znaleziono linku do polityki prywatności w HTML',src:'html',w:'Nie znaleźliśmy linku do polityki prywatności w kodzie HTML strony.'+jsNote+(js?'':' Jeśli link jest dodawany przez JavaScript (np. w banerze cookie), może być obecny ale niewidoczny dla naszej analizy.')+' Polityka prywatności jest wymagana gdy strona zbiera jakiekolwiek dane.',fix:js?'Jeśli link jest ładowany przez JS, rozważ dodanie go też w statycznym HTML (lepiej dla SEO i dostępności).':'Upewnij się że link do polityki prywatności jest widoczny w stopce strony (bezpośrednio w HTML, nie tylko w JS).'});
   else f.push({s:'green',t:'Polityka prywatności znaleziona',src:'html',w:'Link do polityki prywatności jest widoczny na stronie.',fix:null});
-  if(!d.hasCookieBanner) f.push({s:'amber',t:'Nie wykryto banera cookie',src:'html',w:'Jeśli strona używa trackerów analitycznych lub reklamowych, baner cookie z możliwością odrzucenia jest wymagany.',fix:'Rozważ Cookiebot, CookieYes lub podobne narzędzie.'});
+  if(!d.hasCookieBanner) f.push({s:js?'amber':'amber',t:'Nie wykryto banera cookie w HTML',src:'html',w:'Nie znaleźliśmy banera cookie w kodzie HTML.'+jsNote+(js?'':' Jeśli strona używa trackerów analitycznych lub reklamowych, baner cookie z możliwością odrzucenia jest wymagany.'),fix:js?'Jeśli baner cookie jest ładowany przez JS (np. CookieBot, CookieYes) — jest OK. Nie musi być w statycznym HTML.':'Rozważ Cookiebot, CookieYes lub podobne narzędzie.'});
   else f.push({s:'green',t:'Baner cookie wykryty',src:'html',w:'Strona informuje użytkowników o używaniu cookies.',fix:null});
   const trackers=[];
   if(d.hasGA) trackers.push('Google Analytics');
   if(d.hasFB) trackers.push('Facebook Pixel');
   if(d.hasHotjar) trackers.push('Hotjar');
-  if(trackers.length&&!d.hasCookieBanner) f.push({s:'red',t:`Trackery bez banera cookie: ${trackers.join(', ')}`,src:'html',w:'Na stronie są narzędzia śledzące użytkowników, ale nie znaleźliśmy banera cookie. Według RODO użytkownik musi wyrazić zgodę zanim te narzędzia zaczną działać.',fix:'Dodaj baner cookie (np. Cookiebot, CookieYes) który blokuje trackery do momentu wyrażenia zgody.'});
+  if(trackers.length&&!d.hasCookieBanner) f.push({s:js?'amber':'red',t:`Trackery ${js?'bez widocznego w HTML':'bez'} banera cookie: ${trackers.join(', ')}`,src:'html',w:'Na stronie są narzędzia śledzące użytkowników, ale nie znaleźliśmy banera cookie w kodzie HTML.'+jsNote+(js?'':' Według RODO użytkownik musi wyrazić zgodę zanim te narzędzia zaczną działać.'),fix:js?'Jeśli baner cookie jest ładowany dynamicznie przez JS — sprawdź czy blokuje trackery do wyrażenia zgody.':'Dodaj baner cookie (np. Cookiebot, CookieYes) który blokuje trackery do momentu wyrażenia zgody.'});
   else if(trackers.length) f.push({s:'green',t:`Trackery wykryte, baner cookie obecny: ${trackers.join(', ')}`,src:'html',w:'Znaleźliśmy narzędzia analityczne i baner cookie. Upewnij się że trackery uruchamiają się dopiero po wyrażeniu zgody przez użytkownika.',fix:null});
   if(d.hasForms&&!d.formHasConsent) f.push({s:'amber',t:'Formularz bez widocznego checkboxa zgody',src:'html',w:'Jeśli formularz zbiera dane do marketingu, wymagana jest oddzielna zgoda użytkownika.',fix:'Dodaj checkbox z tekstem zgody marketingowej oddzielony od zgody na regulamin.'});
   if(d.hasExternalGoogleFonts) f.push({s:'amber',t:'Google Fonts ładowane z serwerów Google',src:'html',w:'Strona ładuje czcionki z fonts.googleapis.com. Według wyroków sądowych w UE (m.in. niemiecki wyrok LG München, 2022) przekazywanie adresu IP użytkownika do Google bez zgody narusza RODO. Google Fonts przesyła IP do serwerów Google przy każdym załadowaniu strony.',fix:'Pobierz fonty lokalnie (self-hosting). Narzędzie: google-webfonts-helper.herokuapp.com. W WordPress: wtyczka OMGF.'});
@@ -1263,11 +1288,13 @@ function unlockContent(){
 checkPurchase();
 
 function buildUX(d){
+  const js=d.isJSHeavy;
+  const jsNote=js?' Strona używa frameworka JS — te elementy mogą być ładowane dynamicznie i widoczne dopiero po załadowaniu JavaScript w przeglądarce.':'';
   const f=[];
-  if(!d.hasCTA) f.push({s:'red',t:'Nie znaleziono wezwania do działania',src:'html',w:'Strona nie ma widocznego przycisku lub linku zachęcającego do kontaktu, zakupu lub zapisu. Użytkownik nie wie co ma zrobić dalej.',fix:'Dodaj wyraźny przycisk (np. "Skontaktuj się", "Zamów", "Sprawdź ofertę") widoczny bez przewijania.'});
-  if(!d.hasPhone&&!d.hasEmail) f.push({s:'amber',t:'Brak widocznych danych kontaktowych',src:'html',w:'Nie znaleźliśmy numeru telefonu ani adresu email na stronie. Klient który chce się skontaktować może zrezygnować.',fix:'Dodaj telefon i/lub email widoczny w nagłówku lub stopce strony.'});
-  if(!d.hasSocial) f.push({s:'amber',t:'Brak linków do social media',src:'html',w:'Linki do profili społecznościowych budują zaufanie i dają klientom dodatkowy sposób na kontakt.',fix:'Dodaj linki do swoich profili (Facebook, LinkedIn, Instagram) w stopce.'});
-  if(d.hasTrustBadges<3) f.push({s:'amber',t:`Mało sygnałów zaufania (${d.hasTrustBadges} z 6)`,src:'html',w:'Sygnały zaufania (adres, telefon, email, polityka prywatności, regulamin, social media) przekonują klienta że firma jest prawdziwa. Im więcej, tym lepiej. Google też to docenia (E-E-A-T).',fix:'Dodaj brakujące elementy: adres firmy, telefon, email, politykę prywatności, regulamin, linki do social media.'});
+  if(!d.hasCTA) f.push({s:js?'amber':'red',t:'Nie znaleziono wezwania do działania w HTML',src:'html',w:(js?'W kodzie HTML nie znaleźliśmy przycisków CTA.'+jsNote:'Strona nie ma widocznego przycisku lub linku zachęcającego do kontaktu, zakupu lub zapisu. Użytkownik nie wie co ma zrobić dalej.'),fix:js?'Jeśli przyciski CTA są renderowane przez JavaScript, rozważ dodanie ich też w statycznym HTML (tzw. server-side rendering). Poprawia to SEO i czas do pierwszej interakcji.':'Dodaj wyraźny przycisk (np. "Skontaktuj się", "Zamów", "Sprawdź ofertę") widoczny bez przewijania.'});
+  if(!d.hasPhone&&!d.hasEmail) f.push({s:'amber',t:'Brak widocznych danych kontaktowych w HTML',src:'html',w:'Nie znaleźliśmy numeru telefonu ani adresu email w kodzie HTML strony.'+jsNote,fix:'Dodaj telefon i/lub email widoczny w nagłówku lub stopce strony.'});
+  if(!d.hasSocial) f.push({s:'amber',t:'Brak linków do social media w HTML',src:'html',w:'Nie znaleźliśmy linków do profili społecznościowych w kodzie HTML.'+jsNote,fix:'Dodaj linki do swoich profili (Facebook, LinkedIn, Instagram) w stopce.'});
+  if(d.hasTrustBadges<3) f.push({s:'amber',t:`Mało sygnałów zaufania w HTML (${d.hasTrustBadges} z 6)`,src:'html',w:'Sygnały zaufania (adres, telefon, email, polityka prywatności, regulamin, social media) przekonują klienta że firma jest prawdziwa.'+(js?' Część z nich może być ładowana przez JavaScript i niewidoczna w tej analizie.':' Im więcej, tym lepiej. Google też to docenia (E-E-A-T).'),fix:'Dodaj brakujące elementy: adres firmy, telefon, email, politykę prywatności, regulamin, linki do social media.'+(js?' Elementy obecne tylko po załadowaniu JS są niewidoczne dla crawlerów Google.':'')});
   if(!f.length) f.push({s:'green',t:'Podstawy UX wyglądają dobrze',src:'html',w:'Strona ma przyciski akcji, dane kontaktowe i sygnały zaufania.',fix:null});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
