@@ -809,18 +809,19 @@ function renderReport(d,url){
   const el=document.getElementById('report');
   el.style.display='block';
 
-  const issues=[];
-  if(!d.title) issues.push('brak tytułu strony');
-  if(!d.metaDesc) issues.push('Google nie ma opisu Twojej strony do wyświetlenia');
-  if(d.h1Count===0) issues.push('strona nie mówi jasno o czym jest');
-  if(d.sitemapStatus==='missing') issues.push('Google może nie widzieć części Twoich podstron');
-  if(d.llmsStatus==='missing') issues.push('ChatGPT i inne AI nie wiedzą co oferujesz');
-  if(!d.hasSchema) issues.push('wyszukiwarki nie rozumieją czym się zajmujesz');
-  if(d.mobileScore!=null&&d.mobileScore<50) issues.push('strona ładuje się za wolno na telefonach');
+  const critical=[];
+  const minor=[];
+  if(!d.title) critical.push('brak tytułu strony');
+  if(!d.metaDesc) critical.push('Google nie ma opisu Twojej strony do wyświetlenia');
+  if(d.mobileScore!=null&&d.mobileScore<50) critical.push('strona ładuje się za wolno na telefonach');
+  if(d.h1Count===0) minor.push('strona nie mówi jasno o czym jest');
+  if(d.sitemapStatus==='missing') minor.push('Google może nie widzieć części Twoich podstron');
+  if(d.llmsStatus==='missing') minor.push('ChatGPT i inne AI nie wiedzą co oferujesz');
+  if(!d.hasSchema) minor.push('wyszukiwarki nie rozumieją czym się zajmujesz');
+  const issues=[...critical,...minor];
 
-  const critical=issues.filter((_,i)=>i<3).length;
-  const sc=critical>1?'bad':issues.length>2?'warn':'good';
-  const stitle=critical>1?'Twoja strona może tracić klientów':issues.length>1?'Strona działa, ale mogłaby przyciągać więcej klientów':'Strona jest w dobrej formie';
+  const sc=critical.length>=2?'bad':(critical.length>=1||minor.length>=3)?'warn':'good';
+  const stitle=sc==='bad'?'Twoja strona może tracić klientów':sc==='warn'?'Strona działa, ale mogłaby przyciągać więcej klientów':'Strona jest w dobrej formie';
   const stext=issues.length?issues.slice(0,3).join('. ')+'.':'Nie znaleziono poważnych problemów. Twoja strona jest dobrze przygotowana.';
 
   el.innerHTML=`
