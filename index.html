@@ -480,7 +480,8 @@ const STEPS = [
   'Analizuję strukturę treści…',
   'Sprawdzam czy Google zna wszystkie podstrony…',
   'Sprawdzam widoczność dla AI…',
-  'Mierzę szybkość ładowania…',
+  'Mierzę szybkość na telefonie…',
+  'Mierzę szybkość na komputerze…',
   'Sprawdzam prywatność i RODO…',
   'Przygotowuję raport…'
 ];
@@ -934,13 +935,15 @@ async function runAnalysis(url){
     }
     return null;
   }
-  const [mobResult,dskResult]=await Promise.all([fetchPS('mobile'),fetchPS('desktop')]);
+  const mobResult=await fetchPS('mobile');
   if(mobResult){R.mobileScore=mobResult.score;R.lcp=mobResult.lcp;R.cls=mobResult.cls;R.fcp=mobResult.fcp;R.tbt=mobResult.tbt;}
+  showStep(6); await delay(300);
+  const dskResult=await fetchPS('desktop');
   if(dskResult){R.desktopScore=dskResult.score;R.dLcp=dskResult.lcp;R.dFcp=dskResult.fcp;R.dCls=dskResult.cls;R.dTbt=dskResult.tbt;}
   R.pageSpeedUrl='https://pagespeed.web.dev/analysis?url='+encodeURIComponent(url);
 
-  showStep(6); await delay(200);
-  showStep(7); await delay(400);
+  showStep(7); await delay(200);
+  showStep(8); await delay(400);
 
   // compute sub-scores (6 areas)
   let seoScore=100, aiScore=100, privScore=100, indexScore=100, structScore=100;
