@@ -9,9 +9,12 @@
 <link rel="canonical" href="https://www.drstrona.pl/">
 <meta property="og:title" content="Dr.Strona — zbadaj zdrowie swojej strony">
 <meta property="og:description" content="Zbadaj 6 obszarów (+1 bonus) swojej strony w 59 sekund. Dowiedz się co blokuje Twój ruch, widoczność i konwersje.">
+<meta property="og:image" content="https://www.drstrona.pl/og-image.png">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.drstrona.pl/">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.bunny.net/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap">
 <!-- Google Analytics 4 -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-S3NVC7K6R4"></script>
 <script>
@@ -19,8 +22,6 @@ window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);
 gtag('js',new Date());gtag('config','G-S3NVC7K6R4');
 </script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
-
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root {
@@ -673,6 +674,18 @@ async function runAnalysis(url){
   R.totalJS=scripts.length;
   R.totalCSS=styles.length;
 
+  // headings (must be before brokenHeadingHierarchy check)
+  const h1s=[...doc.querySelectorAll('h1')];
+  const h2s=[...doc.querySelectorAll('h2')];
+  const h3s=[...doc.querySelectorAll('h3')];
+  R.h1Count=h1s.length;
+  R.h1Text=h1s[0]?.textContent?.trim().substring(0,80)||null;
+  R.h2Count=h2s.length;
+  R.h3Count=h3s.length;
+  const imgs=[...doc.querySelectorAll('img')];
+  R.totalImages=imgs.length;
+  R.imgsNoAlt=imgs.filter(i=>!i.hasAttribute('alt')).length;
+
   // lazy loading on images
   const imgsAll=[...doc.querySelectorAll('img')];
   R.imgsNoLazy=imgsAll.filter(i=>!i.hasAttribute('loading')).length;
@@ -705,16 +718,6 @@ async function runAnalysis(url){
   if(R.h1Count>0&&R.h3Count>0&&R.h2Count===0) R.brokenHeadingHierarchy=true;
 
   showStep(2); await delay(200);
-  const h1s=[...doc.querySelectorAll('h1')];
-  const h2s=[...doc.querySelectorAll('h2')];
-  const h3s=[...doc.querySelectorAll('h3')];
-  R.h1Count=h1s.length;
-  R.h1Text=h1s[0]?.textContent?.trim().substring(0,80)||null;
-  R.h2Count=h2s.length;
-  R.h3Count=h3s.length;
-  const imgs=[...doc.querySelectorAll('img')];
-  R.totalImages=imgs.length;
-  R.imgsNoAlt=imgs.filter(i=>!i.hasAttribute('alt')).length;
   // word count
   const bodyText=doc.body?.textContent||'';
   R.wordCount=bodyText.split(/\s+/).filter(w=>w.length>1).length;
