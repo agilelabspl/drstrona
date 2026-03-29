@@ -1029,10 +1029,8 @@ function renderReport(d,url){
 
   el.scrollIntoView({behavior:'smooth'});
 
-  // unlock if already purchased
-  if(localStorage.getItem('drstrona_unlocked')==='true'){
-    unlockContent();
-  }
+  // beta: always show full report
+  unlockContent();
 }
 
 function chk(ok, label, detail){
