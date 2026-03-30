@@ -318,6 +318,19 @@ h1 em{font-style:italic;color:var(--accent)}
 .gate-locked{display:flex;align-items:center;gap:8px;justify-content:center;font-size:14px;color:var(--ink2);margin-top:20px;margin-bottom:-4px;font-weight:500}
 .gate-locked::before{content:'';width:12px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239C9489' stroke-width='2'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0110 0v4'/%3E%3C/svg%3E") no-repeat center/contain}
 
+/* ── FEEDBACK BAR ── */
+.feedback-bar{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:99;
+  background:var(--card);border-top:1px solid var(--border2);
+  padding:10px 24px;text-align:center;
+  box-shadow:0 -2px 12px rgba(26,23,20,0.06);
+}
+.feedback-bar a{
+  font-size:13px;font-family:var(--ff-sans);color:var(--accent);
+  text-decoration:none;font-weight:500;
+}
+.feedback-bar a:hover{text-decoration:underline}
+
 /* ── FOOTER ── */
 footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--ink3)}
 
@@ -1481,9 +1494,11 @@ function updateUIForUser(){
   const loginBtn = document.getElementById('navLoginBtn');
   const userEl = document.getElementById('navUser');
   const nameEl = document.getElementById('navUserName');
+  const fb = document.getElementById('feedbackBar');
   if(loginBtn) loginBtn.style.display='none';
   if(userEl) userEl.style.display='flex';
   if(nameEl) nameEl.textContent = googleUser.name;
+  if(fb) fb.style.display='block';
 }
 
 function handleLogout(){
@@ -1610,5 +1625,8 @@ function buildGood(d){
   </div>`;
 }
 </script>
+<div class="feedback-bar" id="feedbackBar">
+  <a href="https://forms.gle/k7rtbYoYJ9z8LDTx6" target="_blank" rel="noopener">Napisz mi feedback</a>
+</div>
 </body>
 </html>
