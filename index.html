@@ -1286,26 +1286,25 @@ function buildStructure(d){
 
 function buildSpeed(d){
   const f=[];
-  const psLink=`<a href="${d.pageSpeedUrl||'https://pagespeed.web.dev'}" target="_blank" style="color:var(--accent);text-decoration:underline">otwórz PageSpeed Insights →</a>`;
   // Mobile
   if(d.mobileScore==null){
-    f.push({s:'amber',t:'📱 Telefon: Google PageSpeed chwilowo niedostępny',src:'live',w:'API nie zwróciło danych po 2 próbach. To normalne przy dużym ruchu. Wynik szybkości nie wpływa na pozostałe sekcje raportu.',fix:`Sprawdź ręcznie: ${psLink}`});
+    f.push({s:'amber',t:'📱 Telefon: Google PageSpeed chwilowo niedostępny',src:'live',w:'API nie zwróciło danych po 2 próbach. To normalne przy dużym ruchu. Wynik szybkości nie wpływa na pozostałe sekcje raportu.',fix:'Spróbuj ponownie za kilka minut. Jeśli problem się powtarza, serwer Google może być przeciążony.'});
   } else if(d.mobileScore<50){
-    f.push({s:'red',t:`📱 Telefon: ${d.mobileScore}/100 — za wolno`,src:'live',w:`Wynik poniżej 50 to poważny problem. Badania Google pokazują że 53% użytkowników zamyka stronę jeśli ładuje się dłużej niż 3 sekundy. Tracisz klientów zanim zobaczą ofertę.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:`Szczegóły: ${psLink}`});
+    f.push({s:'red',t:`📱 Telefon: ${d.mobileScore}/100`,src:'live',w:`Wynik poniżej 50 to poważny problem. Badania Google pokazują że 53% użytkowników zamyka stronę jeśli ładuje się dłużej niż 3 sekundy. Tracisz klientów zanim zobaczą ofertę.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:'Zoptymalizuj największy element na stronie (zazwyczaj obrazek hero): użyj formatu WebP, dodaj width/height, kompresuj. Rozważ lazy loading dla obrazków poniżej pierwszego ekranu.'});
   } else if(d.mobileScore<80){
-    f.push({s:'amber',t:`📱 Telefon: ${d.mobileScore}/100 — jest pole do poprawy`,src:'live',w:`Strona działa, ale wolniej niż powinna na telefonach. Część użytkowników mobilnych może ją opuszczać.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:`Szczegóły: ${psLink}`});
+    f.push({s:'amber',t:`📱 Telefon: ${d.mobileScore}/100`,src:'live',w:`Strona działa, ale wolniej niż powinna na telefonach. Część użytkowników mobilnych może ją opuszczać.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:'Sprawdź rozmiar obrazków (max 200 KB na obrazek), włącz kompresję GZIP/Brotli na serwerze, rozważ CDN. Usuń nieużywane skrypty JS i CSS.'});
   } else {
-    f.push({s:'green',t:`📱 Telefon: ${d.mobileScore}/100 — dobry wynik`,src:'live',w:`Strona ładuje się szybko na telefonach.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:null});
+    f.push({s:'green',t:`📱 Telefon: ${d.mobileScore}/100`,src:'live',w:`Strona ładuje się szybko na telefonach.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:null});
   }
   // Desktop
   if(d.desktopScore==null){
-    f.push({s:'amber',t:'🖥️ Komputer: Google PageSpeed chwilowo niedostępny',src:'live',w:'API nie zwróciło danych dla wersji desktopowej.',fix:`Sprawdź ręcznie: ${psLink}`});
+    f.push({s:'amber',t:'🖥️ Komputer: Google PageSpeed chwilowo niedostępny',src:'live',w:'API nie zwróciło danych dla wersji desktopowej.',fix:'Spróbuj ponownie za kilka minut.'});
   } else if(d.desktopScore<50){
-    f.push({s:'red',t:`🖥️ Komputer: ${d.desktopScore}/100 — za wolno`,src:'live',w:`Strona ładuje się za wolno nawet na komputerze.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:`Szczegóły: ${psLink}`});
+    f.push({s:'red',t:`🖥️ Komputer: ${d.desktopScore}/100`,src:'live',w:`Strona ładuje się za wolno nawet na komputerze.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:'Zoptymalizuj obrazki, włącz kompresję serwera (GZIP/Brotli), przenieś ciężkie skrypty na koniec strony z atrybutem defer.'});
   } else if(d.desktopScore<80){
-    f.push({s:'amber',t:`🖥️ Komputer: ${d.desktopScore}/100 — jest pole do poprawy`,src:'live',w:`Strona mogłaby ładować się szybciej na komputerach.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:`Szczegóły: ${psLink}`});
+    f.push({s:'amber',t:`🖥️ Komputer: ${d.desktopScore}/100`,src:'live',w:`Strona mogłaby ładować się szybciej na komputerach.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:'Sprawdź rozmiar zasobów, włącz cache przeglądarki, rozważ CDN.'});
   } else {
-    f.push({s:'green',t:`🖥️ Komputer: ${d.desktopScore}/100 — dobry wynik`,src:'live',w:`Strona ładuje się szybko na komputerach.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:null});
+    f.push({s:'green',t:`🖥️ Komputer: ${d.desktopScore}/100`,src:'live',w:`Strona ładuje się szybko na komputerach.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:null});
   }
   if(d.hasUnminified) f.push({s:'amber',t:`Niezminifikowane pliki: ${d.unminifiedJS} JS, ${d.unminifiedCSS} CSS`,src:'html',w:'Pliki JavaScript i CSS nie są zminifikowane (skompresowane). Minifikacja usuwa zbędne spacje i komentarze, zmniejszając rozmiar plików o 20-40%. To przyspiesza ładowanie strony.',fix:'Włącz minifikację w CMS lub narzędziu do budowania. WordPress: wtyczka Autoptimize lub WP Rocket.'});
   if(d.hasBlockingScripts) f.push({s:'amber',t:`${d.blockingScripts} skryptów blokuje ładowanie strony`,src:'html',w:'Skrypty bez atrybutu defer lub async blokują rendering strony. Przeglądarka musi pobrać i wykonać skrypt zanim pokaże resztę treści. To spowalnia ładowanie.',fix:'Dodaj atrybut defer (lub async) do tagów script. Defer ładuje skrypt równolegle i wykonuje po sparsowaniu HTML.'});
