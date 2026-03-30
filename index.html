@@ -343,7 +343,7 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
       Dr.Strona
     </div>
     <div class="nav-right">
-      <button class="nav-login" id="navLoginBtn" onclick="handleLogin()">Zaloguj się</button>
+      <div id="navLoginBtn"></div>
     <div class="nav-user" id="navUser" style="display:none">
       <span id="navUserName"></span>
       <button class="nav-logout" onclick="handleLogout()">Wyloguj</button>
@@ -1154,9 +1154,7 @@ function renderReport(d,url){
           <h3>Zaloguj się żeby zobaczyć pełny wynik</h3>
           <p>Widzisz 1 z 7 recept. Zaloguj się przez Google żeby odblokować pełne wyniki badania.</p>
           <div id="gateForm">
-            <div class="gate-btn-wrap">
-              <button class="gate-btn" onclick="handleLogin()">Zaloguj się przez Google</button>
-            </div>
+            <div class="gate-btn-wrap" id="gateLoginBtn"></div>
             <div class="gate-hint">Darmowe. Używamy tylko Twojego imienia i emaila.</div>
           </div>
           <div class="gate-success" id="gateSuccess">
@@ -1176,6 +1174,9 @@ function renderReport(d,url){
   </div>`;
 
   el.scrollIntoView({behavior:'smooth'});
+
+  // render Google button in gate popup
+  renderGoogleButtons();
 
   // unlock if logged in
   if(googleUser && localStorage.getItem('drstrona_unlocked')==='true'){
@@ -1420,6 +1421,32 @@ function initGoogleSignIn(){
     callback: onGoogleSignIn,
     auto_select: true,
   });
+  renderGoogleButtons();
+}
+
+function renderGoogleButtons(){
+  if(typeof google === 'undefined') return;
+  const navBtn = document.getElementById('navLoginBtn');
+  if(navBtn && !googleUser){
+    google.accounts.id.renderButton(navBtn, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'signin_with',
+      locale: 'pl',
+    });
+  }
+  const gateBtn = document.getElementById('gateLoginBtn');
+  if(gateBtn){
+    google.accounts.id.renderButton(gateBtn, {
+      type: 'standard',
+      theme: 'filled_blue',
+      size: 'large',
+      text: 'signin_with',
+      width: 280,
+      locale: 'pl',
+    });
+  }
 }
 
 function handleLogin(){
