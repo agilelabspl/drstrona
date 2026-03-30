@@ -206,7 +206,8 @@ h1 em{font-style:italic;color:var(--accent)}
 .rec-diagnoza-text{font-family:var(--ff-serif);font-size:18px;font-weight:300;line-height:1.5;color:var(--ink)}
 
 /* recepta pozycja */
-.rec-poz{border-bottom:1.5px dashed var(--border2)}
+.rec-poz{border-bottom:none;margin-bottom:0}
+.rec-poz + .rec-poz{border-top:3px solid var(--accent);margin-top:8px}
 .rec-poz:last-child{border-bottom:none}
 .rec-poz-head{display:flex;justify-content:space-between;align-items:center;padding:16px 40px 0}
 .rec-poz-nr{font-family:var(--ff-mono);font-size:10px;color:var(--ink3);letter-spacing:0.05em}
@@ -1136,7 +1137,7 @@ function renderReport(d,url){
 
     ${buildSEO(d)}
 
-    <div style="text-align:center;padding:16px 40px;font-size:13px;color:var(--ink3);font-family:var(--ff-mono)">Pozostałe 6 recept wymaga zalogowania</div>
+    <div id="gateMessage" style="text-align:center;padding:16px 40px;font-size:13px;color:var(--ink3);font-family:var(--ff-mono)">Pozostałe 6 recept wymaga zalogowania</div>
 
     <div id="gatedContent" class="gate-wrap">
       <div id="gatedBlur" class="gate-blur">
@@ -1500,10 +1501,12 @@ function unlockContent(){
   const blur = document.getElementById('gatedBlur');
   const overlay = document.getElementById('gateOverlay');
   const locked = document.querySelector('.gate-locked');
+  const msg = document.getElementById('gateMessage');
   if(blur) blur.classList.remove('gate-blur');
   if(blur){ blur.style.maxHeight='none'; blur.style.opacity='1'; blur.style.pointerEvents='auto'; blur.style.userSelect='auto'; }
   if(overlay) overlay.style.display='none';
   if(locked) locked.style.display='none';
+  if(msg) msg.style.display='none';
   const form = document.getElementById('gateForm');
   const success = document.getElementById('gateSuccess');
   if(form) form.style.display='none';
