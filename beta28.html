@@ -181,11 +181,11 @@ h1 em{font-style:italic;color:var(--accent)}
 .rec-barcode-lines span:nth-child(even){width:1px;opacity:0.4}
 .rec-barcode-lines span:nth-child(3n){width:3px}
 
-.rec-meta{display:grid;grid-template-columns:auto 1fr;gap:4px 20px;padding:18px 40px;border-bottom:1px solid var(--border);font-size:13px;line-height:1.8}
-.rec-meta-label{color:var(--ink3);font-family:var(--ff-mono);font-size:11px;text-align:right;padding-top:2px}
+.rec-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 20px;padding:20px 40px;border-bottom:1px solid var(--border);font-size:16px;line-height:1.8}
+.rec-meta-label{color:var(--ink3);font-family:var(--ff-mono);font-size:14px;text-align:right;padding-top:2px}
 .rec-meta-value{color:var(--ink);font-weight:500}
-.rec-meta-value.url{font-family:var(--ff-mono);font-size:13px;color:var(--accent);word-break:break-all}
-.rec-meta-value small{font-weight:400;color:var(--ink3);font-size:12px}
+.rec-meta-value.url{font-family:var(--ff-mono);font-size:16px;color:var(--accent);word-break:break-all}
+.rec-meta-value small{font-weight:400;color:var(--ink3);font-size:13px}
 
 .rec-wyniki{padding:18px 40px;border-bottom:1.5px dashed var(--border2)}
 .rec-wyniki-title{font-family:var(--ff-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink3);margin-bottom:12px}
@@ -527,7 +527,7 @@ function showStep(i){
 
 async function startScan(){
   let url = document.getElementById('urlInput').value.trim().replace(/\/+$/,'');
-  if(url) gtag('event','scan_start',{url: url});
+  if(url) gtag('event','scan_start',{event_label: url});
   if(!url){ document.getElementById('urlInput').focus(); return; }
   if(!url.startsWith('http')) url = 'https://'+url;
   try{ new URL(url); }catch{
@@ -556,7 +556,7 @@ async function startScan(){
 
   try{
     const data = await runAnalysis(url);
-    gtag('event','scan_complete',{url: url, seo: data.seoScore, speed: data.speedScore, ai: data.aiScore});
+    gtag('event','scan_complete',{event_label: url, seo: data.seoScore, speed: data.speedScore, ai: data.aiScore});
     loading.style.display='none';
     renderReport(data, url);
   }catch(e){
