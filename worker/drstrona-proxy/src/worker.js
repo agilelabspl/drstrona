@@ -21,6 +21,13 @@ export default {
       return handleUserSave(request, env, corsHeaders);
     }
     if (url.pathname === '/api/users' && request.method === 'GET') {
+      const token = request.headers.get('X-Admin-Token');
+      if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       return handleUsersList(env, corsHeaders);
     }
 
@@ -166,21 +173,39 @@ async function renderWithBrowser(targetUrl, env) {
 
 // ── USER MANAGEMENT ──
 
+const GOOGLE_CLIENT_ID = '359294549298-9mdj15320njchdvjl1gr31brgs19r5uq.apps.googleusercontent.com';
+
+async function verifyGoogleToken(credential) {
+  const resp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+  if (!resp.ok) return null;
+  const payload = await resp.json();
+  if (payload.aud !== GOOGLE_CLIENT_ID) return null;
+  return { email: payload.email, name: payload.given_name || payload.name };
+}
+
 async function handleUserSave(request, env, corsHeaders) {
   try {
-    const { email, name, scan_url, date } = await request.json();
-    if (!email) {
-      return new Response(JSON.stringify({ error: 'Missing email' }), {
+    const { credential, scan_url, date } = await request.json();
+    if (!credential) {
+      return new Response(JSON.stringify({ error: 'Missing credential' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const key = `user:${email}`;
+    const verified = await verifyGoogleToken(credential);
+    if (!verified) {
+      return new Response(JSON.stringify({ error: 'Invalid Google token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const key = `user:${verified.email}`;
     const existing = await env.USERS.get(key, 'json');
 
-    const user = existing || { email, name, scans: [], created: date };
-    user.name = name || user.name;
+    const user = existing || { email: verified.email, name: verified.name, scans: [], created: date };
+    user.name = verified.name || user.name;
 
     if (scan_url) {
       user.scans.push({ url: scan_url, date });
