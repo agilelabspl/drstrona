@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dr.Strona — zbadaj zdrowie swojej strony</title>
+<title>Dr.Strona | zbadaj zdrowie swojej strony</title>
 <meta name="description" content="Zbadaj 6 obszarów (+1 bonus) swojej strony w 59 sekund. SEO, szybkość, AI Ready (GEO), indeksowanie, struktura, RODO. Dowiedz się co poprawić.">
 <link rel="icon" href="favicon.svg">
 <link rel="canonical" href="https://www.drstrona.pl/">
-<meta property="og:title" content="Dr.Strona — zbadaj zdrowie swojej strony">
+<meta property="og:title" content="Dr.Strona | zbadaj zdrowie swojej strony">
 <meta property="og:description" content="Zbadaj 6 obszarów (+1 bonus) swojej strony w 59 sekund. Dowiedz się co blokuje Twój ruch, widoczność i konwersje.">
 <meta property="og:image" content="https://www.drstrona.pl/og-image.png">
 <meta property="og:type" content="website">
@@ -228,6 +228,15 @@ h1 em{font-style:italic;color:var(--accent)}
 .ok-icon{width:20px;height:20px;border-radius:50%;background:var(--green-bg);border:1px solid var(--green-bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:11px;color:var(--green)}
 
 .disclaimer{font-size:13px;color:var(--ink3);border-top:1px solid var(--border);padding-top:16px;margin-top:8px;line-height:1.7}
+
+.js-alert{
+  background:var(--amber-bg);border:1.5px solid var(--amber-bd);border-radius:14px;
+  padding:20px 24px;margin:20px 0 8px;display:flex;gap:14px;align-items:flex-start;
+}
+.js-alert-icon{font-size:28px;flex-shrink:0;line-height:1}
+.js-alert-body{font-size:15px;color:var(--ink);line-height:1.6}
+.js-alert-title{font-weight:600;font-size:16px;margin-bottom:4px;color:var(--amber)}
+.js-alert-score{font-size:13px;color:var(--ink3);margin-top:8px;font-style:italic}
 
 /* ── CONTENT GATE ── */
 .gate-wrap{position:relative;margin-top:0;padding-top:0}
@@ -586,9 +595,10 @@ async function runAnalysis(url){
   R.hstsHeader='';
   // Try our Worker first (with metadata), fallback to plain proxy
   let gotMeta=false;
+  R.renderedVia='fetch';
   try{
     const ctrl=new AbortController();
-    const timer=setTimeout(()=>ctrl.abort(),12000);
+    const timer=setTimeout(()=>ctrl.abort(),25000);
     const res=await fetch(`https://drstrona-proxy.agilelabs-pl.workers.dev/?url=${encodeURIComponent(url)}`,{signal:ctrl.signal});
     clearTimeout(timer);
     if(res.ok){
@@ -599,6 +609,7 @@ async function runAnalysis(url){
         R.finalUrl=res.headers.get('X-Proxy-Final-Url')||url;
         R.xRobotsTag=res.headers.get('X-Robots-Tag')||'';
         R.hstsHeader=res.headers.get('X-Proxy-HSTS')||'';
+        R.renderedVia=res.headers.get('X-Proxy-Rendered')||'fetch';
         gotMeta=true;
       }
     }
@@ -621,12 +632,23 @@ async function runAnalysis(url){
   else if(html.includes('__SVELTE__')||html.includes('svelte')) R.jsFramework='Svelte';
   else if(doc.querySelector('#app[data-v-]')||doc.querySelector('[data-v-]')||html.includes('Vue.js')||html.includes('vue.min.js')||html.includes('vue.global')) R.jsFramework='Vue';
   else if(html.includes('react')||html.includes('_reactRoot')||doc.querySelector('[data-reactroot],[data-reactid]')) R.jsFramework='React';
+  else if(html.includes('wix-thunderbolt')||html.includes('wixstatic.com')||html.includes('wix-code-sdk')) R.jsFramework='Wix';
+  else if(html.includes('squarespace')||html.includes('sqsp.net')||html.includes('sqs-') ) R.jsFramework='Squarespace';
+  else if(html.includes('webflow.com')||html.includes('wf-page')||html.includes('w-webflow')) R.jsFramework='Webflow';
+  else if(html.includes('cdn.shopify.com')||html.includes('Shopify.theme')) R.jsFramework='Shopify';
+  else if(html.includes('wp-content')&&html.includes('wp-json')&&html.includes('wp-includes')) R.jsFramework='WordPress (heavy JS)';
   if(!R.jsFramework){
-    const root=doc.querySelector('#root,#app,#__next');
-    const bodyChildren=doc.body?[...doc.body.children].filter(el=>el.tagName!=='SCRIPT'&&el.tagName!=='LINK'&&el.tagName!=='NOSCRIPT'):[];
+    const root=doc.querySelector('#root,#app,#__next,#__layout');
+    const bodyChildren=doc.body?[...doc.body.children].filter(el=>el.tagName!=='SCRIPT'&&el.tagName!=='LINK'&&el.tagName!=='NOSCRIPT'&&el.tagName!=='STYLE'):[];
     if(root&&bodyChildren.length<=3) R.jsFramework='SPA (framework nierozpoznany)';
   }
-  R.isJSHeavy=!!R.jsFramework;
+  // heurystyka: mało tekstu + dużo skryptów = prawdopodobnie JS-heavy
+  const _bodyText=doc.body?doc.body.textContent.replace(/\s+/g,' ').trim():'';
+  const _bodyWords=_bodyText.split(/\s+/).filter(w=>w.length>1).length;
+  const _scriptCount=doc.querySelectorAll('script[src]').length;
+  if(!R.jsFramework&&_bodyWords<50&&_scriptCount>=3) R.jsFramework='Strona dynamiczna (treść ładowana przez JavaScript)';
+  // Jeśli Browser Rendering zrenderował JS → mamy pełny HTML, nie traktuj jako JS-heavy
+  R.isJSHeavy=!!R.jsFramework&&R.renderedVia!=='browser';
 
   showStep(1); await delay(200);
   R.title = doc.querySelector('title')?.textContent?.trim()||null;
@@ -946,12 +968,14 @@ async function runAnalysis(url){
   showStep(8); await delay(400);
 
   // compute sub-scores (6 areas)
+  // JS-heavy: zmniejszone kary za elementy typowo renderowane przez JS
+  const js=R.isJSHeavy;
   let seoScore=100, aiScore=100, privScore=100, indexScore=100, structScore=100;
-  // SEO: title, meta desc, canonical
+  // SEO: title, meta desc, canonical (te są w <head>, JS nie wpływa)
   if(!R.title) seoScore-=35;
   if(!R.metaDesc) seoScore-=35;
   if(!R.canonical) seoScore-=30;
-  // Indeksowanie: sitemap, robots
+  // Indeksowanie: sitemap, robots (pliki serwerowe, JS nie wpływa)
   if(R.hasNoindex) indexScore-=50;
   if(R.sitemapStatus==='missing') indexScore-=25;
   else if(R.sitemapStatus==='unknown') indexScore-=10;
@@ -960,24 +984,24 @@ async function runAnalysis(url){
   if(R.hasRobots&&!R.robotsSitemap) indexScore-=15;
   if(R.hasRedirects&&R.redirectCount>=3) indexScore-=10;
   if(R.canonicalConflict) indexScore-=15;
-  // Struktura: schema, h1, alt
-  if(!R.hasSchema) structScore-=35;
-  if(R.h1Count===0) structScore-=30;
+  // Struktura: schema, h1, alt (JS-heavy: mogą być renderowane dynamicznie)
+  if(!R.hasSchema) structScore-=(js?15:35);
+  if(R.h1Count===0) structScore-=(js?10:30);
   if(R.h1Count>1) structScore-=15;
-  if(R.imgsNoAlt>0) structScore-=20;
+  if(R.imgsNoAlt>0) structScore-=(js?5:20);
   // AI Ready
   if(R.llmsStatus==='missing') aiScore-=30;
   else if(R.llmsStatus==='unknown') aiScore-=10;
   if(R.gptBlocked) aiScore-=25;
-  if(!R.hasSchema) aiScore-=15;
+  if(!R.hasSchema) aiScore-=(js?5:15);
   if(R.robotsStatus==='missing') aiScore-=10;
   else if(R.robotsStatus==='unknown') aiScore-=5;
-  if(!R.hasAEOFormats) aiScore-=10;
-  if(!R.hasAuthor&&!R.hasAuthorSchema) aiScore-=10;
-  // RODO
-  if(!R.hasPrivacy) privScore-=30;
-  if(!R.hasCookieBanner) privScore-=35;
-  if(R.hasForms&&!R.formHasConsent) privScore-=25;
+  if(!R.hasAEOFormats) aiScore-=(js?5:10);
+  if(!R.hasAuthor&&!R.hasAuthorSchema) aiScore-=(js?5:10);
+  // RODO (cookie banner, privacy link: prawie zawsze JS-rendered)
+  if(!R.hasPrivacy) privScore-=(js?10:30);
+  if(!R.hasCookieBanner) privScore-=(js?10:35);
+  if(R.hasForms&&!R.formHasConsent) privScore-=(js?10:25);
   R.seoScore=Math.max(0,seoScore);
   R.aiScore=Math.max(0,aiScore);
   R.privScore=Math.max(0,privScore);
@@ -1014,10 +1038,10 @@ function renderReport(d,url){
   if(!d.metaDesc) critical.push('Google nie ma opisu Twojej strony do wyświetlenia');
   if(d.mobileScore!=null&&d.mobileScore<50) critical.push('strona ładuje się za wolno na telefonach');
   if(d.hasNoindex) critical.push('strona mówi Google żeby jej nie indeksował');
-  if(d.h1Count===0) minor.push('strona nie mówi jasno o czym jest');
+  if(d.h1Count===0&&!d.isJSHeavy) minor.push('strona nie mówi jasno o czym jest');
   if(d.sitemapStatus==='missing') minor.push('Google może nie widzieć części Twoich podstron');
   if(d.llmsStatus==='missing') minor.push('ChatGPT i inne AI nie wiedzą co oferujesz');
-  if(!d.hasSchema) minor.push('wyszukiwarki nie rozumieją czym się zajmujesz');
+  if(!d.hasSchema&&!d.isJSHeavy) minor.push('wyszukiwarki nie rozumieją czym się zajmujesz');
   const issues=[...critical,...minor];
 
   const sc=critical.length>=2?'bad':(critical.length>=1||minor.length>=3)?'warn':'good';
@@ -1028,9 +1052,19 @@ function renderReport(d,url){
     <div class="report-header">
       <div class="report-url">${esc(d.url)} · ${d.ts}</div>
       <div class="report-title">Wyniki zdrowia Twojej strony</div>
-      <div class="report-intro">Zbadaliśmy 6 obszarów (+1 bonusowy) Twojej strony. Zapoznaj się z wynikami i receptą.${d.isJSHeavy?'<br><strong style="color:var(--amber)">⚠ Wykryto framework JavaScript'+(d.jsFramework?' ('+esc(d.jsFramework)+')':'')+'. </strong>Część treści strony jest ładowana dynamicznie i może nie być widoczna w analizie HTML. Elementy oznaczone jako "brak" mogą być obecne po załadowaniu JavaScript.':''}</div>
+      <div class="report-intro">Zbadaliśmy 6 obszarów (+1 bonusowy) Twojej strony. Zapoznaj się z wynikami i receptą.</div>
       <div class="report-meta">Analiza HTML + Google PageSpeed API · strona główna${d.isJSHeavy?' · wykryto: '+esc(d.jsFramework):''}</div>
     </div>
+    ${d.isJSHeavy?`
+    <div class="js-alert">
+      <div class="js-alert-icon">🔬</div>
+      <div class="js-alert-body">
+        <div class="js-alert-title">Wykryto stronę dynamiczną${d.jsFramework?' ('+esc(d.jsFramework)+')':''}</div>
+        Twoja strona ładuje treść przez JavaScript. Nasz skaner analizuje kod HTML, który serwer zwraca przed uruchomieniem skryptów. Elementy takie jak menu, stopka, baner cookie czy przyciski CTA mogą być obecne na stronie, ale niewidoczne w tej analizie.
+        <div class="js-alert-score">Punktacja została skorygowana. Wyniki <span class="tag tag-html">HTML</span> bazują na kodzie źródłowym, który nie zawiera treści generowanych przez JavaScript. Wyniki <span class="tag tag-live">live API</span> (szybkość, indeksowanie) są w pełni wiarygodne.</div>
+      </div>
+    </div>
+    `:''}
 
     <div class="summary ${sc}">
       <h2>${stitle}</h2>
