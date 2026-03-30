@@ -1,3 +1,7 @@
 name = "drstrona-proxy"
 main = "src/worker.js"
 compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "USERS"
+id = "d816f5b3c04643c89cee3be51b0bf56e"

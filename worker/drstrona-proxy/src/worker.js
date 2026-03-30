@@ -6,7 +6,7 @@ export default {
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };
 
@@ -15,6 +15,15 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    // ── USER API ──
+    if (url.pathname === '/api/user' && request.method === 'POST') {
+      return handleUserSave(request, env, corsHeaders);
+    }
+    if (url.pathname === '/api/users' && request.method === 'GET') {
+      return handleUsersList(env, corsHeaders);
+    }
+
     const target = url.searchParams.get('url');
 
     if (!target) {
@@ -153,4 +162,51 @@ async function renderWithBrowser(targetUrl, env) {
 
   if (!resp.ok) return null;
   return await resp.text();
+}
+
+// ── USER MANAGEMENT ──
+
+async function handleUserSave(request, env, corsHeaders) {
+  try {
+    const { email, name, scan_url, date } = await request.json();
+    if (!email) {
+      return new Response(JSON.stringify({ error: 'Missing email' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const key = `user:${email}`;
+    const existing = await env.USERS.get(key, 'json');
+
+    const user = existing || { email, name, scans: [], created: date };
+    user.name = name || user.name;
+
+    if (scan_url) {
+      user.scans.push({ url: scan_url, date });
+    }
+
+    await env.USERS.put(key, JSON.stringify(user));
+
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+async function handleUsersList(env, corsHeaders) {
+  const list = await env.USERS.list({ prefix: 'user:' });
+  const users = [];
+  for (const key of list.keys) {
+    const data = await env.USERS.get(key.name, 'json');
+    if (data) users.push(data);
+  }
+  return new Response(JSON.stringify(users), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }

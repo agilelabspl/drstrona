@@ -15,6 +15,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
 <link rel="stylesheet" href="https://fonts.bunny.net/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap">
+<!-- Google Sign-In -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Google Analytics 4 -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-S3NVC7K6R4"></script>
 <script>
@@ -55,26 +57,30 @@ html{overflow-x:hidden}
 
 /* ── NAV ── */
 nav{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 24px;border-bottom:1px solid var(--border);
+  border-bottom:1px solid var(--border);
   background:var(--card);position:sticky;top:0;z-index:100;
+  padding:14px 24px;
+}
+.nav-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  max-width:1080px;margin:0 auto;
 }
 .nav-logo{display:flex;align-items:center;gap:10px;font-family:var(--ff-serif);font-size:18px;font-weight:400;color:var(--ink)}
 .nav-pulse{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:heartbeat 1.8s ease-in-out infinite}
 @keyframes heartbeat{0%,100%{transform:scale(1);opacity:1}14%{transform:scale(1.3)}28%{transform:scale(1)}42%{transform:scale(1.15)}70%{transform:scale(1)}}
 .nav-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
-.nav-mvp{
-  display:inline-flex;align-items:center;gap:6px;
-  font-size:12px;font-weight:600;font-family:var(--ff-mono);
+.nav-login{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:14px;font-weight:600;font-family:var(--ff-sans);
   background:var(--accent);color:white;
-  border:none;border-radius:8px;padding:6px 14px;
-  cursor:pointer;text-decoration:none;transition:background .2s,transform .1s;
-  letter-spacing:0.03em;
+  border:none;border-radius:10px;padding:10px 22px;
+  cursor:pointer;transition:background .2s,transform .1s;
+  letter-spacing:0.01em;
 }
-.nav-mvp:hover{background:var(--accent2);transform:scale(1.03)}
-.nav-mvp-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.7);animation:blink 1.2s ease-in-out infinite}
-.nav-feedback{font-size:11px;color:var(--ink3);text-decoration:none;transition:color .2s}
-.nav-feedback:hover{color:var(--accent)}
+.nav-login:hover{background:var(--accent2);transform:scale(1.03)}
+.nav-user{display:flex;align-items:center;gap:12px;font-size:13px;font-family:var(--ff-sans);color:var(--ink2)}
+.nav-logout{background:none;border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;color:var(--ink3);transition:border-color .2s}
+.nav-logout:hover{border-color:var(--accent);color:var(--accent)}
 
 /* ── HERO ── */
 .hero{max-width:1080px;margin:0 auto;padding:80px 48px 60px;text-align:center}
@@ -331,12 +337,18 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
 <body>
 
 <nav>
-  <div class="nav-logo">
-    <div class="nav-pulse"></div>
-    Dr.Strona
-  </div>
-  <div class="nav-right">
-    <a class="nav-mvp" href="https://forms.gle/k7rtbYoYJ9z8LDTx6" target="_blank" rel="noopener"><span class="nav-mvp-dot"></span>MVP Feedback</a>
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <div class="nav-pulse"></div>
+      Dr.Strona
+    </div>
+    <div class="nav-right">
+      <button class="nav-login" id="navLoginBtn" onclick="handleLogin()">Zaloguj się</button>
+    <div class="nav-user" id="navUser" style="display:none">
+      <span id="navUserName"></span>
+      <button class="nav-logout" onclick="handleLogout()">Wyloguj</button>
+    </div>
+    </div>
   </div>
 </nav>
 
@@ -1123,12 +1135,12 @@ function renderReport(d,url){
     </div>
 
     ${buildSEO(d)}
-    ${buildSpeed(d)}
 
-    <div style="text-align:center;padding:16px 40px;font-size:13px;color:var(--ink3);font-family:var(--ff-mono)">Pozostałe 5 recept wymaga odblokowania</div>
+    <div style="text-align:center;padding:16px 40px;font-size:13px;color:var(--ink3);font-family:var(--ff-mono)">Pozostałe 6 recept wymaga zalogowania</div>
 
     <div id="gatedContent" class="gate-wrap">
       <div id="gatedBlur" class="gate-blur">
+        ${buildSpeed(d)}
         ${buildIndex(d)}
         ${buildStructure(d)}
         ${buildAI(d)}
@@ -1139,17 +1151,16 @@ function renderReport(d,url){
       <div id="gateOverlay" class="gate-overlay">
         <div class="gate-card">
           <div class="gate-icon">🔒</div>
-          <h3>Wykup pełną receptę</h3>
-          <p>Widzisz 2 z 7 recept. Odblokuj pełne wyniki badania ze wszystkimi rekomendacjami.</p>
+          <h3>Zaloguj się żeby zobaczyć pełny wynik</h3>
+          <p>Widzisz 1 z 7 recept. Zaloguj się przez Google żeby odblokować pełne wyniki badania.</p>
           <div id="gateForm">
-            <div class="gate-price">9 zł</div>
             <div class="gate-btn-wrap">
-              <button class="gate-btn" onclick="purchaseReport()">Odblokuj pełną receptę</button>
+              <button class="gate-btn" onclick="handleLogin()">Zaloguj się przez Google</button>
             </div>
-            <div class="gate-hint">Jednorazowa płatność. Bezpieczna płatność przez Stripe.</div>
+            <div class="gate-hint">Darmowe. Używamy tylko Twojego imienia i emaila.</div>
           </div>
           <div class="gate-success" id="gateSuccess">
-            <p>Płatność potwierdzona. Oto pełne wyniki badania.</p>
+            <p>Zalogowano. Oto pełne wyniki badania.</p>
           </div>
         </div>
       </div>
@@ -1166,9 +1177,13 @@ function renderReport(d,url){
 
   el.scrollIntoView({behavior:'smooth'});
 
-  // unlock if already purchased
-  if(localStorage.getItem('drstrona_unlocked')==='true'){
+  // unlock if logged in
+  if(googleUser && localStorage.getItem('drstrona_unlocked')==='true'){
     unlockContent();
+  }
+  // save scan to KV if logged in
+  if(googleUser){
+    saveUserToKV(googleUser);
   }
 }
 
@@ -1394,29 +1409,63 @@ function buildPrivacy(d){
 /* ── KEYBOARD ── */
 document.getElementById('urlInput').addEventListener('keydown',e=>{if(e.key==='Enter')startScan()});
 
-/* ── STRIPE PURCHASE ── */
-const STRIPE_LINK = 'https://buy.stripe.com/28E7sDgXD1Uzbdz3aofAc0a';
+/* ── GOOGLE SIGN-IN ── */
+const GOOGLE_CLIENT_ID = '359294549298-9mdj15320njchdvjl1gr31brgs19r5uq.apps.googleusercontent.com';
+let googleUser = null;
 
-function purchaseReport(){
-  gtag('event','purchase_click',{value: 9, currency: 'PLN'});
-  localStorage.setItem('drstrona_pending', 'true');
-  window.location.href = STRIPE_LINK;
+function initGoogleSignIn(){
+  if(typeof google === 'undefined') return;
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: onGoogleSignIn,
+    auto_select: true,
+  });
 }
 
-function checkPurchase(){
-  const pending = localStorage.getItem('drstrona_pending');
-  if(pending && window.location.search.includes('sid=txn_v2f8k3m')){
-    localStorage.removeItem('drstrona_pending');
-    localStorage.setItem('drstrona_unlocked', 'true');
-    gtag('event','purchase_complete',{value: 9, currency: 'PLN'});
-    unlockContent();
+function handleLogin(){
+  if(typeof google === 'undefined'){
+    alert('Google Sign-In się ładuje. Spróbuj za chwilę.');
+    return;
   }
-  if(localStorage.getItem('drstrona_unlocked')==='true'){
-    unlockContent();
-  }
+  google.accounts.id.prompt();
+}
+
+function onGoogleSignIn(response){
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  googleUser = {
+    email: payload.email,
+    name: payload.given_name || payload.name,
+    picture: payload.picture,
+  };
+  localStorage.setItem('drstrona_user', JSON.stringify(googleUser));
+  gtag('event','login',{method:'google'});
+  updateUIForUser();
+  unlockContent();
+  saveUserToKV(googleUser);
+}
+
+function updateUIForUser(){
+  const loginBtn = document.getElementById('navLoginBtn');
+  const userEl = document.getElementById('navUser');
+  const nameEl = document.getElementById('navUserName');
+  if(loginBtn) loginBtn.style.display='none';
+  if(userEl) userEl.style.display='flex';
+  if(nameEl) nameEl.textContent = googleUser.name;
+}
+
+function handleLogout(){
+  googleUser = null;
+  localStorage.removeItem('drstrona_user');
+  localStorage.removeItem('drstrona_unlocked');
+  const loginBtn = document.getElementById('navLoginBtn');
+  const userEl = document.getElementById('navUser');
+  if(loginBtn) loginBtn.style.display='inline-flex';
+  if(userEl) userEl.style.display='none';
+  location.reload();
 }
 
 function unlockContent(){
+  localStorage.setItem('drstrona_unlocked','true');
   const blur = document.getElementById('gatedBlur');
   const overlay = document.getElementById('gateOverlay');
   const locked = document.querySelector('.gate-locked');
@@ -1430,7 +1479,29 @@ function unlockContent(){
   if(success) success.style.display='block';
 }
 
-checkPurchase();
+function saveUserToKV(user){
+  const scanUrl = document.getElementById('urlInput')?.value || '';
+  fetch('https://drstrona-proxy.agilelabs-pl.workers.dev/api/user', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email:user.email, name:user.name, scan_url:scanUrl, date:new Date().toISOString()})
+  }).catch(()=>{});
+}
+
+// Restore session on load
+function checkSession(){
+  const saved = localStorage.getItem('drstrona_user');
+  if(saved){
+    googleUser = JSON.parse(saved);
+    updateUIForUser();
+    if(localStorage.getItem('drstrona_unlocked')==='true'){
+      unlockContent();
+    }
+  }
+}
+
+// Init
+window.addEventListener('load', ()=>{ initGoogleSignIn(); checkSession(); });
 
 function buildUX(d){
   const js=d.isJSHeavy;
