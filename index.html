@@ -1140,7 +1140,7 @@ function renderReport(d,url){
           <h3>Wykup pełną receptę</h3>
           <p>Widzisz 2 z 7 recept. Odblokuj pełne wyniki badania ze wszystkimi rekomendacjami.</p>
           <div id="gateForm">
-            <div class="gate-price">29 zł</div>
+            <div class="gate-price">9 zł</div>
             <div class="gate-btn-wrap">
               <button class="gate-btn" onclick="purchaseReport()">Odblokuj pełną receptę</button>
             </div>
@@ -1393,10 +1393,10 @@ function buildPrivacy(d){
 document.getElementById('urlInput').addEventListener('keydown',e=>{if(e.key==='Enter')startScan()});
 
 /* ── STRIPE PURCHASE ── */
-const STRIPE_LINK = 'https://buy.stripe.com/7sY14fePvdDhchD4esfAc09';
+const STRIPE_LINK = 'https://buy.stripe.com/28E7sDgXD1Uzbdz3aofAc0a';
 
 function purchaseReport(){
-  gtag('event','purchase_click',{value: 29, currency: 'PLN'});
+  gtag('event','purchase_click',{value: 9, currency: 'PLN'});
   localStorage.setItem('drstrona_pending', 'true');
   window.location.href = STRIPE_LINK;
 }
@@ -1406,7 +1406,7 @@ function checkPurchase(){
   if(pending && window.location.search.includes('sid=txn_v2f8k3m')){
     localStorage.removeItem('drstrona_pending');
     localStorage.setItem('drstrona_unlocked', 'true');
-    gtag('event','purchase_complete',{value: 29, currency: 'PLN'});
+    gtag('event','purchase_complete',{value: 9, currency: 'PLN'});
     unlockContent();
   }
   if(localStorage.getItem('drstrona_unlocked')==='true'){
