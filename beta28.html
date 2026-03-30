@@ -165,86 +165,102 @@ h1 em{font-style:italic;color:var(--accent)}
 /* ── ERROR ── */
 .error-box{display:none;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:12px;padding:14px 20px;font-size:14px;color:var(--red);max-width:680px;margin:20px auto}
 
-/* ── REPORT ── */
-#report{display:none;max-width:1040px;margin:48px auto 80px;padding:0 40px}
+/* ── REPORT (RECEPTA) ── */
+#report{display:none;max-width:720px;margin:48px auto 80px;padding:0 20px}
 
-.report-header{margin-bottom:36px}
-.report-url{font-family:var(--ff-mono);font-size:14px;color:var(--ink3);margin-bottom:10px}
-.report-title{font-family:var(--ff-serif);font-size:40px;font-weight:300;margin-bottom:10px;letter-spacing:-0.02em}
-.report-intro{font-size:18px;color:var(--ink2);line-height:1.6;margin-bottom:12px}
-.report-meta{font-size:15px;color:var(--ink3)}
+.recepta{background:var(--card);border:1.5px solid var(--border2);border-radius:3px;box-shadow:0 2px 24px rgba(26,23,20,0.06);position:relative}
+.recepta::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--accent) 0%,#7B70F0 100%)}
 
-.summary{border-radius:16px;padding:24px 28px;margin-bottom:28px;border:1px solid}
-.summary.good{background:var(--green-bg);border-color:var(--green-bd)}
-.summary.warn{background:var(--amber-bg);border-color:var(--amber-bd)}
-.summary.bad{background:var(--red-bg);border-color:var(--red-bd)}
-.summary h2{font-family:var(--ff-serif);font-size:26px;font-weight:400;margin-bottom:10px}
-.summary.good h2{color:var(--green)}
-.summary.warn h2{color:var(--amber)}
-.summary.bad h2{color:var(--red)}
-.summary p{font-size:17px;color:var(--ink);line-height:1.7}
+.rec-header{padding:32px 40px 24px;border-bottom:1.5px dashed var(--border2);text-align:center}
+.rec-logo{font-family:var(--ff-serif);font-size:28px;font-weight:400;color:var(--ink);margin-bottom:2px}
+.rec-logo span{color:var(--accent)}
+.rec-subtitle{font-size:11px;font-family:var(--ff-mono);color:var(--ink3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:18px}
+.rec-barcode{font-family:var(--ff-mono);font-size:10px;color:var(--ink3);letter-spacing:0.15em}
+.rec-barcode-lines{display:flex;justify-content:center;gap:1.5px;margin-bottom:4px;height:30px}
+.rec-barcode-lines span{display:block;width:2px;background:var(--ink);border-radius:1px}
+.rec-barcode-lines span:nth-child(even){width:1px;opacity:0.4}
+.rec-barcode-lines span:nth-child(3n){width:3px}
 
-.status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
-.status-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
-.status-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.sdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.sdot-green{background:var(--green)}.sdot-amber{background:var(--amber)}.sdot-red{background:var(--red)}.sdot-gray{background:var(--ink3)}
-.status-label{font-size:15px;color:var(--ink2);font-family:var(--ff-mono);letter-spacing:0.03em;font-weight:500}
-.status-verdict{font-size:32px;font-weight:600;margin-bottom:0;font-family:var(--ff-mono)}
-.status-detail{font-size:14px;color:var(--ink);line-height:1.6}
+.rec-meta{display:grid;grid-template-columns:auto 1fr;gap:4px 20px;padding:18px 40px;border-bottom:1px solid var(--border);font-size:13px;line-height:1.8}
+.rec-meta-label{color:var(--ink3);font-family:var(--ff-mono);font-size:11px;text-align:right;padding-top:2px}
+.rec-meta-value{color:var(--ink);font-weight:500}
+.rec-meta-value.url{font-family:var(--ff-mono);font-size:13px;color:var(--accent);word-break:break-all}
+.rec-meta-value small{font-weight:400;color:var(--ink3);font-size:12px}
 
-.section{background:var(--card);border:1px solid var(--border);border-radius:16px;margin-bottom:16px;overflow:hidden}
-.section-header{padding:18px 24px;display:flex;align-items:center;gap:12px}
-.sev-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.section-title{font-size:19px;font-weight:500;flex:1}
-.section-sub{font-size:14px;color:var(--ink3);font-family:var(--ff-mono)}
-.section-body{padding:0 24px 18px;border-top:1px solid var(--border)}
+.rec-wyniki{padding:18px 40px;border-bottom:1.5px dashed var(--border2)}
+.rec-wyniki-title{font-family:var(--ff-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink3);margin-bottom:12px}
+.rec-scores{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rec-score{text-align:center;padding:10px 6px;border:1px solid var(--border);border-radius:5px}
+.rec-score-val{font-family:var(--ff-serif);font-size:26px;font-weight:400;line-height:1}
+.rec-score-label{font-size:10px;color:var(--ink3);margin-top:3px;font-family:var(--ff-mono);letter-spacing:0.03em}
 
-.finding{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:14px}
-.finding:last-child{border-bottom:none;padding-bottom:0}
-.fdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:7px}
-.fdot-red{background:var(--red)}.fdot-amber{background:var(--amber)}.fdot-green{background:var(--green)}
-.finding-title{font-size:17px;font-weight:500;margin-bottom:6px}
-.finding-why{font-size:16px;color:var(--ink);line-height:1.7;margin-bottom:8px}
-.finding-fix{font-size:15px;background:var(--bg2);border-radius:10px;padding:12px 16px;line-height:1.6;color:var(--ink)}
-.fix-label{color:var(--accent);font-weight:500}
+.rec-diagnoza{padding:18px 40px;border-bottom:1px solid var(--border);background:rgba(91,79,232,0.02)}
+.rec-diagnoza-label{font-family:var(--ff-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:6px}
+.rec-diagnoza-text{font-family:var(--ff-serif);font-size:18px;font-weight:300;line-height:1.5;color:var(--ink)}
 
-.checklist{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
-.checklist-title{font-size:14px;font-weight:500;color:var(--ink3);margin-bottom:12px;font-family:var(--ff-mono);text-transform:uppercase;letter-spacing:0.04em}
-.check-item{display:flex;align-items:flex-start;gap:10px;padding:7px 0;font-size:16px;color:var(--ink);line-height:1.5}
-.check-icon{flex-shrink:0;width:22px;font-size:16px;text-align:center}
-.check-ok{color:var(--green)}
-.check-fail{color:var(--red)}
-.check-warn{color:var(--amber)}
-.check-na{color:var(--ink3)}
-.check-detail{color:var(--ink3);font-size:14px;margin-left:32px;margin-top:-2px;margin-bottom:4px}
+/* recepta pozycja */
+.rec-poz{border-bottom:1.5px dashed var(--border2)}
+.rec-poz:last-child{border-bottom:none}
+.rec-poz-head{display:flex;justify-content:space-between;align-items:center;padding:16px 40px 0}
+.rec-poz-nr{font-family:var(--ff-mono);font-size:10px;color:var(--ink3);letter-spacing:0.05em}
+.rec-poz-score{font-family:var(--ff-mono);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+.rec-poz-score.sg{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.rec-poz-score.sa{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.rec-poz-score.sr{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.rec-poz-title{font-family:var(--ff-serif);font-size:20px;font-weight:400;padding:8px 40px 0;color:var(--ink);letter-spacing:-0.01em}
+.rec-poz-sub{font-size:12px;color:var(--ink3);padding:2px 40px 0;font-family:var(--ff-mono)}
 
-.tag{display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;margin-left:8px;font-weight:500;font-family:var(--ff-mono);vertical-align:middle}
+.rec-findings{padding:14px 40px 0}
+.rec-f{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.rec-f:last-child{border-bottom:none}
+.rec-f-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:6px}
+.rec-f-dot.fg{background:var(--green)}.rec-f-dot.fa{background:var(--amber)}.rec-f-dot.fr{background:var(--red)}
+.rec-f-body{flex:1;min-width:0}
+.rec-f-title{font-size:15px;font-weight:500;color:var(--ink);line-height:1.4;margin-bottom:2px}
+.rec-f-why{font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:4px}
+.rec-f-fix{font-size:14px;line-height:1.5;background:rgba(91,79,232,0.04);border-left:3px solid var(--accent);padding:6px 10px;margin-top:6px;border-radius:0 4px 4px 0}
+.rec-f-fix-label{color:var(--accent);font-weight:600;font-size:12px;font-family:var(--ff-mono)}
+
+.tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:12px;margin-left:6px;font-weight:500;font-family:var(--ff-mono);vertical-align:middle}
 .tag-live{background:rgba(30,138,76,0.1);color:var(--green);border:1px solid var(--green-bd)}
 .tag-html{background:rgba(91,79,232,0.08);color:var(--accent);border:1px solid rgba(91,79,232,0.2)}
 
-.ok-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;font-size:16px;color:var(--ink);border-bottom:1px solid var(--border);line-height:1.6}
+.rec-cl{padding:10px 40px 18px}
+.rec-cl-title{font-family:var(--ff-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink3);margin-bottom:8px}
+.rec-cl-item{display:flex;align-items:flex-start;gap:10px;padding:5px 0;font-size:15px;line-height:1.5}
+.rec-cl-icon{width:22px;flex-shrink:0;text-align:center;font-size:16px}
+.cl-ok{color:var(--green)}.cl-fail{color:var(--red)}.cl-warn{color:var(--amber)}.cl-na{color:var(--ink3)}
+.rec-cl-detail{font-size:12px;color:var(--ink3);margin-left:32px;margin-top:-2px}
+
+/* good items */
+.ok-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;font-size:15px;color:var(--ink);border-bottom:1px solid var(--border);line-height:1.5}
 .ok-item:last-child{border-bottom:none}
 .ok-icon{width:20px;height:20px;border-radius:50%;background:var(--green-bg);border:1px solid var(--green-bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:11px;color:var(--green)}
 
-.disclaimer{font-size:13px;color:var(--ink3);border-top:1px solid var(--border);padding-top:16px;margin-top:8px;line-height:1.7}
+.rec-footer{padding:20px 40px;border-top:1.5px dashed var(--border2);text-align:center}
+.rec-footer-note{font-size:11px;color:var(--ink3);line-height:1.6;max-width:500px;margin:0 auto}
+.rec-footer-stamp{margin-top:14px;display:inline-flex;align-items:center;gap:8px;font-family:var(--ff-serif);font-size:14px;color:var(--accent);opacity:0.7}
+.rec-footer-stamp::before{content:'';width:10px;height:10px;border-radius:50%;background:var(--accent);animation:heartbeat 1.8s ease-in-out infinite}
+
+.disclaimer{font-size:12px;color:var(--ink3);padding:16px 40px 0;line-height:1.7}
 
 .js-alert{
-  background:var(--amber-bg);border:1.5px solid var(--amber-bd);border-radius:14px;
-  padding:20px 24px;margin:20px 0 8px;display:flex;gap:14px;align-items:flex-start;
+  background:var(--amber-bg);border:1.5px solid var(--amber-bd);border-radius:0;
+  padding:16px 40px;display:flex;gap:14px;align-items:flex-start;
+  border-left:none;border-right:none;
 }
-.js-alert-icon{font-size:28px;flex-shrink:0;line-height:1}
-.js-alert-body{font-size:15px;color:var(--ink);line-height:1.6}
-.js-alert-title{font-weight:600;font-size:16px;margin-bottom:4px;color:var(--amber)}
-.js-alert-score{font-size:13px;color:var(--ink3);margin-top:8px;font-style:italic}
+.js-alert-icon{font-size:24px;flex-shrink:0;line-height:1}
+.js-alert-body{font-size:14px;color:var(--ink);line-height:1.6}
+.js-alert-title{font-weight:600;font-size:15px;margin-bottom:4px;color:var(--amber)}
+.js-alert-score{font-size:12px;color:var(--ink3);margin-top:6px;font-style:italic}
 
 /* ── CONTENT GATE ── */
 .gate-wrap{position:relative;margin-top:0;padding-top:0}
 .gate-blur{filter:blur(6px);pointer-events:none;user-select:none;opacity:0.4;max-height:200px;overflow:hidden}
 .gate-overlay{
   position:relative;z-index:10;
-  background:linear-gradient(180deg, rgba(247,243,238,0) 0%, var(--bg) 8%);
-  margin-top:-40px;padding:20px 24px 0;
+  background:linear-gradient(180deg, rgba(253,250,246,0) 0%, var(--card) 8%);
+  margin-top:-40px;padding:20px 40px 0;
   text-align:center;
 }
 .gate-card{
@@ -297,7 +313,6 @@ h1 em{font-style:italic;color:var(--accent)}
 footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--ink3)}
 
 @media(max-width:540px){
-  .status-grid{grid-template-columns:1fr}
   .input-wrap{flex-direction:column}
   .btn-scan{width:100%}
   nav{padding:16px 20px}
@@ -306,7 +321,9 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
   .ekg-metrics{grid-template-columns:repeat(3,1fr);gap:12px}
   .ekg-metric:nth-child(3n){border-right:none}
   .ekg-metric:nth-child(-n+3){border-bottom:1px solid var(--border);padding-bottom:12px}
-  .status-grid{grid-template-columns:repeat(2,1fr)}
+  .rec-header,.rec-meta,.rec-wyniki,.rec-diagnoza,.rec-poz-head,.rec-poz-title,.rec-poz-sub,.rec-findings,.rec-cl,.rec-footer,.disclaimer,.js-alert,.gate-overlay{padding-left:20px;padding-right:20px}
+  .rec-scores{grid-template-columns:repeat(2,1fr)}
+  .rec-poz-title{font-size:17px}
 }
 </style>
 </head>
@@ -1028,7 +1045,9 @@ async function runAnalysis(url){
 /* ── RENDER ── */
 function scoreColor(s){ return s>=80?'var(--green)':s>=50?'var(--amber)':'var(--red)'; }
 
+let _recCounter=0;
 function renderReport(d,url){
+  _recCounter=0;
   const el=document.getElementById('report');
   el.style.display='block';
 
@@ -1048,13 +1067,31 @@ function renderReport(d,url){
   const stitle=sc==='bad'?'Twoja strona może tracić klientów':sc==='warn'?'Strona działa, ale mogłaby przyciągać więcej klientów':'Strona jest w dobrej formie';
   const stext=issues.length?issues.slice(0,3).join('. ')+'.':'Nie znaleziono poważnych problemów. Twoja strona jest dobrze przygotowana.';
 
-  el.innerHTML=`
-    <div class="report-header">
-      <div class="report-url">${esc(d.url)} · ${d.ts}</div>
-      <div class="report-title">Wyniki zdrowia Twojej strony</div>
-      <div class="report-intro">Zbadaliśmy 6 obszarów (+1 bonusowy) Twojej strony. Zapoznaj się z wynikami i receptą.</div>
-      <div class="report-meta">Analiza HTML + Google PageSpeed API · strona główna${d.isJSHeavy?' · wykryto: '+esc(d.jsFramework):''}</div>
+  const barcode='DR-'+d.ts.replace(/[^0-9]/g,'-').replace(/-+/g,'-');
+  const bars=Array.from({length:24},(_,i)=>`<span style="height:${24+Math.round(Math.random()*8)}px"></span>`).join('');
+
+  el.innerHTML=`<div class="recepta">
+
+    <div class="rec-header">
+      <div class="rec-logo">Dr.<span>Strona</span></div>
+      <div class="rec-subtitle">e-recepta zdrowia strony</div>
+      <div class="rec-barcode">
+        <div class="rec-barcode-lines">${bars}</div>
+        ${esc(barcode)}
+      </div>
     </div>
+
+    <div class="rec-meta">
+      <div class="rec-meta-label">Pacjent:</div>
+      <div class="rec-meta-value url">${esc(d.domain)}</div>
+      <div class="rec-meta-label">Badanie:</div>
+      <div class="rec-meta-value">Audyt zdrowia strony <small>(6 obszarów + 1 bonus)</small></div>
+      <div class="rec-meta-label">Data:</div>
+      <div class="rec-meta-value">${esc(d.ts)}</div>
+      <div class="rec-meta-label">Lekarz:</div>
+      <div class="rec-meta-value">Dr.Strona <small>badanie automatyczne</small></div>
+    </div>
+
     ${d.isJSHeavy?`
     <div class="js-alert">
       <div class="js-alert-icon">🔬</div>
@@ -1066,42 +1103,27 @@ function renderReport(d,url){
     </div>
     `:''}
 
-    <div class="summary ${sc}">
-      <h2>${stitle}</h2>
-      <p>${stext}</p>
+    <div class="rec-wyniki">
+      <div class="rec-wyniki-title">Wyniki badania</div>
+      <div class="rec-scores">
+        <div class="rec-score"><div class="rec-score-val" style="color:${scoreColor(d.seoScore)}">${d.seoScore}</div><div class="rec-score-label">SEO</div></div>
+        <div class="rec-score"><div class="rec-score-val" style="color:${d.mobileScore==null?'var(--ink3)':scoreColor(d.mobileScore)}">${d.mobileScore!=null?d.mobileScore:'?'}</div><div class="rec-score-label">Szybkość</div></div>
+        <div class="rec-score"><div class="rec-score-val" style="color:${scoreColor(d.aiScore)}">${d.aiScore}</div><div class="rec-score-label">AI Ready</div></div>
+        <div class="rec-score"><div class="rec-score-val" style="color:${scoreColor(d.indexScore)}">${d.indexScore}</div><div class="rec-score-label">Indeksowanie</div></div>
+        <div class="rec-score"><div class="rec-score-val" style="color:${scoreColor(d.structScore)}">${d.structScore}</div><div class="rec-score-label">Struktura</div></div>
+        <div class="rec-score"><div class="rec-score-val" style="color:${scoreColor(d.privScore)}">${d.privScore}</div><div class="rec-score-label">RODO</div></div>
+      </div>
     </div>
 
-    <div class="status-grid">
-      <div class="status-card">
-        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.seoScore)}"></div><div class="status-label">SEO</div></div>
-        <div class="status-verdict" style="color:${scoreColor(d.seoScore)}">${d.seoScore}/100</div>
-      </div>
-      <div class="status-card">
-        <div class="status-top"><div class="sdot" style="background:${d.mobileScore==null?'var(--ink3)':scoreColor(d.mobileScore)}"></div><div class="status-label">Szybkość</div></div>
-        <div class="status-verdict" style="color:${d.mobileScore==null?'var(--ink3)':scoreColor(d.mobileScore)}">${d.mobileScore!=null?d.mobileScore+'/100':'?'}</div>
-      </div>
-      <div class="status-card">
-        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.aiScore)}"></div><div class="status-label">AI Ready (GEO)</div></div>
-        <div class="status-verdict" style="color:${scoreColor(d.aiScore)}">${d.aiScore}/100</div>
-      </div>
-      <div class="status-card">
-        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.indexScore)}"></div><div class="status-label">Indeksowanie</div></div>
-        <div class="status-verdict" style="color:${scoreColor(d.indexScore)}">${d.indexScore}/100</div>
-      </div>
-      <div class="status-card">
-        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.structScore)}"></div><div class="status-label">Struktura</div></div>
-        <div class="status-verdict" style="color:${scoreColor(d.structScore)}">${d.structScore}/100</div>
-      </div>
-      <div class="status-card">
-        <div class="status-top"><div class="sdot" style="background:${scoreColor(d.privScore)}"></div><div class="status-label">RODO</div></div>
-        <div class="status-verdict" style="color:${scoreColor(d.privScore)}">${d.privScore}/100</div>
-      </div>
+    <div class="rec-diagnoza">
+      <div class="rec-diagnoza-label">Diagnoza</div>
+      <div class="rec-diagnoza-text">${stitle}. ${stext}</div>
     </div>
 
     ${buildSEO(d)}
     ${buildSpeed(d)}
 
-    <div class="gate-locked">Pozostałe 5 sekcji wymagają odblokowania</div>
+    <div style="text-align:center;padding:16px 40px;font-size:13px;color:var(--ink3);font-family:var(--ff-mono)">Pozostałe 5 recept wymaga odblokowania</div>
 
     <div id="gatedContent" class="gate-wrap">
       <div id="gatedBlur" class="gate-blur">
@@ -1114,13 +1136,13 @@ function renderReport(d,url){
       </div>
       <div id="gateOverlay" class="gate-overlay">
         <div class="gate-card">
-          <div class="gate-icon">🚨</div>
-          <h3>Odblokuj pełne wyniki i receptę</h3>
-          <p>Odblokuj pełne wyniki badania i receptę co poprawić, żeby Twoja strona przyciągała więcej klientów.</p>
+          <div class="gate-icon">🔒</div>
+          <h3>Wykup pełną receptę</h3>
+          <p>Widzisz 2 z 7 recept. Odblokuj pełne wyniki badania ze wszystkimi rekomendacjami.</p>
           <div id="gateForm">
             <div class="gate-price">29 zł</div>
             <div class="gate-btn-wrap">
-              <button class="gate-btn" onclick="purchaseReport()">Kup pełne wyniki badania</button>
+              <button class="gate-btn" onclick="purchaseReport()">Odblokuj pełną receptę</button>
             </div>
             <div class="gate-hint">Jednorazowa płatność. Bezpieczna płatność przez Stripe.</div>
           </div>
@@ -1131,9 +1153,14 @@ function renderReport(d,url){
       </div>
     </div>
 
-    <div class="disclaimer">
-      <strong>Jak działa badanie:</strong> Analizujemy kod HTML Twojej strony głównej oraz pobieramy dane z Google PageSpeed Insights API (w czasie rzeczywistym). ${d.isJSHeavy?'<strong>Twoja strona używa frameworka JavaScript'+(d.jsFramework?' ('+esc(d.jsFramework)+')':'')+' — treści renderowane dynamicznie (przyciski, bannery cookie, linki w stopce) mogą nie być widoczne w analizie statycznego HTML.</strong> Elementy oznaczone "nie znaleziono w HTML" mogą być obecne po załadowaniu strony w przeglądarce. ':'Elementy ładowane wyłącznie przez JavaScript (np. baner cookie, treści dynamiczne) mogą nie być widoczne w naszej analizie. '}Szybkość strony mierzy Google Lighthouse. Wyniki i oceny punktowe są wskaźnikami orientacyjnymi. Badanie nie zastępuje audytu prawnego, pełnej analizy bezpieczeństwa ani eksperckiego audytu SEO.
-    </div>`;
+    <div class="rec-footer">
+      <div class="rec-footer-note">
+        Badanie oparte o analizę kodu HTML strony głównej i Google PageSpeed Insights API (w czasie rzeczywistym). ${d.isJSHeavy?'Strona używa frameworka JavaScript'+(d.jsFramework?' ('+esc(d.jsFramework)+')':'')+'. Treści renderowane dynamicznie mogą nie być widoczne w analizie. ':''}Wyniki orientacyjne. Nie zastępuje audytu prawnego ani eksperckiego audytu SEO.
+      </div>
+      <div class="rec-footer-stamp">Dr.Strona</div>
+    </div>
+
+  </div>`;
 
   el.scrollIntoView({behavior:'smooth'});
 
@@ -1142,33 +1169,37 @@ function renderReport(d,url){
 }
 
 function chk(ok, label, detail){
-  const icon = ok===true?'✓':ok===false?'✗':ok==='warn'?'⚠':'—';
-  const cls = ok===true?'check-ok':ok===false?'check-fail':ok==='warn'?'check-warn':'check-na';
-  return `<div class="check-item"><span class="check-icon ${cls}">${icon}</span><span>${label}</span></div>${detail?'<div class="check-detail">'+detail+'</div>':''}`;
+  const icon = ok===true?'&#10003;':ok===false?'&#10007;':ok==='warn'?'&#9888;':'—';
+  const cls = ok===true?'cl-ok':ok===false?'cl-fail':ok==='warn'?'cl-warn':'cl-na';
+  return `<div class="rec-cl-item"><span class="rec-cl-icon ${cls}">${icon}</span><span>${label}</span></div>${detail?'<div class="rec-cl-detail">'+detail+'</div>':''}`;
 }
 
 function checklist(title, items){
-  return `<div class="checklist"><div class="checklist-title">${title}</div>${items.join('')}</div>`;
+  return `<div class="rec-cl"><div class="rec-cl-title">${title}</div>${items.join('')}</div>`;
 }
 
-function sec(title,sub,dotColor,findings,checklistHtml){
-  return `<div class="section">
-    <div class="section-header">
-      <div class="sev-dot" style="background:${dotColor}"></div>
-      <span class="section-title">${title}</span>
-      <span class="section-sub">${sub}</span>
+function sec(title,sub,dotColor,findings,checklistHtml,score){
+  _recCounter++;
+  const sc=dotColor.includes('green')?'sg':dotColor.includes('amber')?'sa':'sr';
+  const isBonus=_recCounter===7;
+  return `<div class="rec-poz">
+    <div class="rec-poz-head">
+      <div class="rec-poz-nr">Recepta ${_recCounter} z 7${isBonus?' <span style="color:var(--accent);font-weight:600">BONUS</span>':''}</div>
+      ${score!=null?`<div class="rec-poz-score ${sc}">${score} / 100</div>`:''}
     </div>
-    <div class="section-body">${findings.map(f=>`
-      <div class="finding">
-        <div class="fdot fdot-${f.s}"></div>
-        <div>
-          <div class="finding-title">${f.t}<span class="tag tag-${f.src}">${f.src==='live'?'live API':'HTML'}</span></div>
-          <div class="finding-why">${f.w}</div>
-          ${f.fix?`<div class="finding-fix"><span class="fix-label">Recepta: </span>${f.fix}</div>`:''}
+    <div class="rec-poz-title">${title}</div>
+    <div class="rec-poz-sub">${sub}</div>
+    <div class="rec-findings">${findings.map(f=>`
+      <div class="rec-f">
+        <div class="rec-f-dot f${f.s[0]}"></div>
+        <div class="rec-f-body">
+          <div class="rec-f-title">${f.t}<span class="tag tag-${f.src}">${f.src==='live'?'live API':'HTML'}</span></div>
+          <div class="rec-f-why">${f.w}</div>
+          ${f.fix?`<div class="rec-f-fix"><div class="rec-f-fix-label">Recepta:</div>${f.fix}</div>`:''}
         </div>
       </div>`).join('')}
-      ${checklistHtml||''}
     </div>
+    ${checklistHtml||''}
   </div>`;
 }
 
@@ -1194,7 +1225,7 @@ function buildSEO(d){
     chk(d.wordCount>0?(d.wordCount>200):null, 'Wystarczająca ilość treści', d.wordCount>0?d.wordCount+' słów'+(d.wordCount<200?' (mało, Google preferuje min. 300)':''):'treść ładowana przez JavaScript'),
     chk(!d.hasGenericLinks, 'Linki z konkretnym tekstem', d.hasGenericLinks?d.genericLinks+' z ogólnikowym tekstem ("kliknij tutaj" itp.)':null),
   ]);
-  return sec('SEO',d.title?`"${esc(d.title.substring(0,50))}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f,cl);
+  return sec('SEO',d.title?`"${esc(d.title.substring(0,50))}${d.title.length>50?'…':''}"`:' brak tytułu',worst,f,cl,d.seoScore);
 }
 
 function buildIndex(d){
@@ -1221,7 +1252,7 @@ function buildIndex(d){
     chk(d.isHttps?d.hasHSTS:null, 'Wymuszenie HTTPS (HSTS)', d.hasHSTS?'aktywne':d.isHttps?'brak nagłówka Strict-Transport-Security':null),
     chk(d.internalLinks>3, 'Linki wewnętrzne', d.internalLinks+' linków wewnętrznych'),
   ]);
-  return sec('Indeksowanie','Czy Google widzi Twoje podstrony',worst,f,cl);
+  return sec('Indeksowanie','Czy Google widzi Twoje podstrony',worst,f,cl,d.indexScore);
 }
 
 function buildStructure(d){
@@ -1248,7 +1279,7 @@ function buildStructure(d){
     chk(d.textToHtmlRatio>=10, 'Gęstość treści (text-to-HTML ratio)', d.textToHtmlRatio+'% '+(d.textToHtmlRatio>=25?'(dobra)':d.textToHtmlRatio>=10?'(OK)':'(niska)')),
     chk(!d.hasEmptyLinks, 'Brak pustych linków', d.hasEmptyLinks?d.emptyLinks+' bez tekstu':null),
   ]);
-  return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f,cl);
+  return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f,cl,d.structScore);
 }
 
 function buildSpeed(d){
@@ -1296,7 +1327,7 @@ function buildSpeed(d){
     chk(d.totalImages<=3||d.hasLazyLoading, 'Lazy loading na obrazkach', d.totalImages>0?d.imgsNoLazy+' z '+d.totalImages+' bez loading="lazy"':null),
   ]);
   const subtitle=d.mobileScore!=null&&d.desktopScore!=null?`📱 ${d.mobileScore} · 🖥️ ${d.desktopScore}`:d.lcp?`LCP: ${d.lcp}${d.cls?' · CLS: '+d.cls:''}`:d.mobileScore!=null?`Score: ${d.mobileScore}/100`:'Google PageSpeed';
-  return sec('Szybkość strony',subtitle,worst,f,cl);
+  return sec('Szybkość strony',subtitle,worst,f,cl,d.mobileScore);
 }
 
 function buildAI(d){
@@ -1321,7 +1352,7 @@ function buildAI(d){
     chk(d.wordCount>0?(d.wordCount>200):null, 'Wystarczająca treść tekstowa dla AI', d.wordCount>0?d.wordCount+' słów':'treść ładowana przez JavaScript'),
     chk(d.hasDateModified, 'Świeżość treści (data aktualizacji)', d.hasDateModified?'znaleziono: '+d.freshnessSource:'brak daty publikacji/aktualizacji'),
   ]);
-  return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f,cl);
+  return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f,cl,d.aiScore);
 }
 
 function buildPrivacy(d){
@@ -1354,7 +1385,7 @@ function buildPrivacy(d){
     chk(!d.hasExternalGoogleFonts, 'Google Fonts lokalnie (nie z serwerów Google)', d.hasExternalGoogleFonts?'fonts.googleapis.com wykryte':null),
     chk(!d.hasMixedContent, 'Brak mixed content (HTTP na HTTPS)', d.hasMixedContent?d.mixedContent+' zasobów przez HTTP':null),
   ]);
-  return sec('RODO i prywatność','analiza HTML · nie ocena prawna',worst,f,cl);
+  return sec('RODO i prywatność','analiza HTML · nie ocena prawna',worst,f,cl,d.privScore);
 }
 
 /* ── KEYBOARD ── */
@@ -1418,7 +1449,7 @@ function buildUX(d){
     chk(d.hasViewport, 'Strona działa na telefonie (responsywna)'),
     chk(d.hasTrustBadges>=4, 'Sygnały zaufania (E-E-A-T)', d.hasTrustBadges+' z 6 elementów'),
   ]);
-  return sec('UX i wiarygodność (bonus)','Czy klient Ci zaufa i skontaktuje się',worst,f,cl);
+  return sec('UX i wiarygodność (bonus)','Czy klient Ci zaufa i skontaktuje się',worst,f,cl,null);
 }
 
 function buildGood(d){
@@ -1456,13 +1487,12 @@ function buildGood(d){
   if(d.textToHtmlRatio>=25) g.push('Dobra gęstość treści: '+d.textToHtmlRatio+'%');
   if(d.hasTrustBadges>=4) g.push('Silne sygnały zaufania ('+d.hasTrustBadges+'/6)');
   if(!g.length) return '';
-  return `<div class="section">
-    <div class="section-header">
-      <div class="sev-dot" style="background:var(--green)"></div>
-      <span class="section-title">Co działa dobrze</span>
-      <span class="section-sub">${g.length} elementów</span>
+  return `<div class="rec-poz">
+    <div class="rec-poz-head">
+      <div class="rec-poz-nr" style="color:var(--green)">&#10003; Co działa dobrze</div>
+      <div class="rec-poz-score sg">${g.length} elementów</div>
     </div>
-    <div class="section-body" style="padding-top:4px">
+    <div style="padding:12px 40px 18px">
       ${g.map(x=>`<div class="ok-item"><div class="ok-icon">✓</div><span>${x}</span></div>`).join('')}
     </div>
   </div>`;
