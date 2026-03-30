@@ -50,7 +50,8 @@ gtag('js',new Date());gtag('config','G-S3NVC7K6R4');
   --ff-mono: 'DM Mono', monospace;
 }
 
-body{background:var(--bg);color:var(--ink);font-family:var(--ff-sans);min-height:100vh;line-height:1.6}
+body{background:var(--bg);color:var(--ink);font-family:var(--ff-sans);min-height:100vh;line-height:1.6;overflow-x:hidden}
+html{overflow-x:hidden}
 
 /* ── NAV ── */
 nav{
@@ -462,6 +463,7 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
     ctx.fill();
 
     offset += 0.8;
+    if(offset > 1e6) offset -= 1e6 - (1e6 % 120);
     requestAnimationFrame(draw);
   }
   draw();
@@ -842,7 +844,7 @@ async function runAnalysis(url){
   R.hasViewport=!!doc.querySelector('meta[name="viewport"]');
   // language
   R.lang=doc.documentElement?.getAttribute('lang')||null;
-  R.hasCookieBanner=!!doc.querySelector('[class*="cookie"],[id*="cookie"],[class*="consent"],[id*="consent"],[class*="gdpr"],[id*="gdpr"],[class*="rodo"],[id*="rodo"]')||html.includes('CookieConsent')||html.includes('cookieconsent')||html.includes('cookie-banner')||html.includes('cookie_banner')||html.includes('cookie-consent')||html.includes('ciasteczk')||html.includes('cookiebot.com')||html.includes('cookieyes.com')||html.includes('osano.com')||html.includes('onetrust.com')||html.includes('iubenda.com')||html.includes('termsfeed.com')||html.includes('axeptio')||!!doc.querySelector('script[src*="cookie"],script[src*="consent"],script[src*="gdpr"]');
+  R.hasCookieBanner=!!doc.querySelector('[class*="cookie"],[id*="cookie"],[class*="consent"],[id*="consent"],[class*="gdpr"],[id*="gdpr"],[class*="rodo"],[id*="rodo"],[class*="cc-"],[id*="cc-"],[class*="cmp-"],[id*="cmp-"],[data-nosnippet="true"][class*="banner"],[class*="przechowyw"],[aria-label*="cookie" i],[aria-label*="consent" i],[aria-label*="prywatno" i]')||html.includes('CookieConsent')||html.includes('cookieconsent')||html.includes('cookie-banner')||html.includes('cookie_banner')||html.includes('cookie-consent')||html.includes('ciasteczk')||html.includes('cookiebot.com')||html.includes('cookieyes.com')||html.includes('osano.com')||html.includes('onetrust.com')||html.includes('iubenda.com')||html.includes('termsfeed.com')||html.includes('axeptio')||html.includes('trustarc.com')||html.includes('usercentrics')||html.includes('didomi')||html.includes('quantcast')||html.includes('privacymanager')||html.includes('cc_div')||html.includes('cc-window')||html.includes('cc-banner')||html.includes('cmp-container')||html.includes('klaro')||html.includes('tarteaucitron')||html.includes('moove_gdpr')||html.includes('cookie-law-info')||html.includes('cli-modal')||html.includes('cmplz')||html.includes('complianz')||!!doc.querySelector('script[src*="cookie"],script[src*="consent"],script[src*="gdpr"],script[src*="cmp"],script[src*="klaro"],script[src*="tarteaucitron"],script[src*="complianz"],script[src*="cmplz"]');
   R.hasGA=html.includes('google-analytics.com')||html.includes('gtag(');
   R.hasFB=html.includes('facebook.com/tr')||html.includes('fbq(');
   R.hasHotjar=html.includes('hotjar.com');
