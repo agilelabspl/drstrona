@@ -1121,9 +1121,10 @@ async function runAnalysis(url){
   if(!R.hasAEOFormats) aiScore-=(js?5:10);
   if(!R.hasAuthor&&!R.hasAuthorSchema) aiScore-=(js?5:10);
   // RODO (cookie banner, privacy link: prawie zawsze JS-rendered)
-  if(!R.hasPrivacy) privScore-=(js?10:30);
-  if(!R.hasCookieBanner) privScore-=(js?10:35);
-  if(R.hasForms&&!R.formHasConsent) privScore-=(js?10:25);
+  const _hasTrackers=R.hasGA||R.hasFB||R.hasHotjar;
+  if(!R.hasPrivacy&&_hasTrackers) privScore-=(js?10:30);
+  if(!R.hasCookieBanner&&_hasTrackers) privScore-=(js?10:35);
+  if(R.hasForms&&!R.formHasConsent) privScore-=(js?5:10);
   R.seoScore=Math.max(0,seoScore);
   R.aiScore=Math.max(0,aiScore);
   R.privScore=Math.max(0,privScore);
@@ -1443,10 +1444,10 @@ function buildSpeed(d){
 function buildAI(d){
   const f=[];
   if(d.llmsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić widoczności dla AI',src:'html',w:'Nasz serwer nie mógł pobrać pliku llms.txt. Sprawdź ręcznie: '+esc(d.domain)+'/llms.txt',fix:null});
-  else if(!d.hasLlms) f.push({s:'amber',t:'Asystenty AI nie mają przewodnika po Twojej stronie',src:'html',w:'Plik llms.txt to nowy standard, który mówi asystentom AI (ChatGPT, Claude, Perplexity) które treści na Twojej stronie są najważniejsze. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz plik llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org, 15 minut roboty.'});
-  else f.push({s:'green',t:'Przewodnik dla AI znaleziony (llms.txt)',src:'html',w:'Asystenty AI mogą odczytać strukturę i najważniejsze treści serwisu.',fix:null});
+  else if(!d.hasLlms) f.push({s:'amber',t:'Asystenci AI nie mają przewodnika po Twojej stronie',src:'html',w:'Plik llms.txt to nowy standard, który mówi asystentom AI (ChatGPT, Claude, Perplexity) które treści na Twojej stronie są najważniejsze. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz plik llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org, 15 minut roboty.'});
+  else f.push({s:'green',t:'Przewodnik dla AI znaleziony (llms.txt)',src:'html',w:'Asystenci AI mogą odczytać strukturę i najważniejsze treści serwisu.',fix:null});
   if(d.gptBlocked) f.push({s:'amber',t:'GPTBot (ChatGPT) ma zablokowany dostęp',src:'html',w:'Plik robots.txt blokuje GPTBot (bota ChatGPT). Gdy ktoś pyta ChatGPT o Twoją branżę, Twoja strona nie może być uwzględniona w odpowiedzi.',fix:'Jeśli chcesz być widoczny w AI: usuń blokadę GPTBot. Jeśli nie chcesz żeby AI trenowało na treściach, zostaw.'});
-  if(!d.hasSchema) f.push({s:'amber',t:'AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenty AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony głównej.'});
+  if(!d.hasSchema) f.push({s:'amber',t:'AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenci AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony głównej.'});
   if(!d.hasAEOFormats) f.push({s:'amber',t:'Brak formatów przyjaznych AI (listy, tabele)',src:'html',w:'AI preferuje treści w listach, tabelach i definicjach. Takie formaty łatwiej cytować w odpowiedziach. Strona bez nich ma mniejszą szansę na pojawienie się w odpowiedziach ChatGPT czy Google AIO.',fix:'Dodaj listy punktowane, tabele porównawcze lub sekcje FAQ. To formaty które AI najchętniej cytuje.'});
   if(!d.hasAuthor&&!d.hasAuthorSchema) f.push({s:'amber',t:'Brak widocznego autora treści (E-E-A-T)',src:'html',w:'AI coraz bardziej waży wiarygodność źródła. Strona bez podpisanego autora (imię, bio, link do LinkedIn) jest mniej wiarygodna dla algorytmów AI i Google.',fix:'Dodaj podpis autora z krótką biografią i linkiem do profilu LinkedIn. Rozważ schema Person.'});
   if(!d.hasDateModified) f.push({s:'amber',t:'AI nie wie kiedy treść była aktualizowana',src:'html',w:'Na stronie nie znaleziono daty publikacji ani ostatniej aktualizacji. AI i Google premiują świeże treści. Bez daty Twoja strona wygląda na potencjalnie nieaktualną.',fix:'Dodaj datę aktualizacji: element <time datetime="...">, meta tag article:modified_time, lub dateModified w schema.org.'});
@@ -1469,29 +1470,32 @@ function buildPrivacy(d){
   const js=d.isJSHeavy;
   const jsNote=js?' Strona używa frameworka JS — ten element może być ładowany dynamicznie i obecny po załadowaniu strony w przeglądarce.':'';
   const f=[];
-  if(!d.hasPrivacy) f.push({s:js?'amber':'amber',t:'Nie znaleziono linku do polityki prywatności w HTML',src:'html',w:'Nie znaleźliśmy linku do polityki prywatności w kodzie HTML strony.'+jsNote+(js?'':' Jeśli link jest dodawany przez JavaScript (np. w banerze cookie), może być obecny ale niewidoczny dla naszej analizy.')+' Polityka prywatności jest wymagana gdy strona zbiera jakiekolwiek dane.',fix:js?'Jeśli link jest ładowany przez JS, rozważ dodanie go też w statycznym HTML (lepiej dla SEO i dostępności).':'Upewnij się że link do polityki prywatności jest widoczny w stopce strony (bezpośrednio w HTML, nie tylko w JS).'});
-  else f.push({s:'green',t:'Polityka prywatności znaleziona',src:'html',w:'Link do polityki prywatności jest widoczny na stronie.',fix:null});
-  if(!d.hasCookieBanner) f.push({s:js?'amber':'amber',t:'Nie wykryto banera cookie w HTML',src:'html',w:'Nie znaleźliśmy banera cookie w kodzie HTML.'+jsNote+(js?'':' Jeśli strona używa trackerów analitycznych lub reklamowych, baner cookie z możliwością odrzucenia jest wymagany.'),fix:js?'Jeśli baner cookie jest ładowany przez JS (np. CookieBot, CookieYes) — jest OK. Nie musi być w statycznym HTML.':'Rozważ Cookiebot, CookieYes lub podobne narzędzie.'});
-  else f.push({s:'green',t:'Baner cookie wykryty',src:'html',w:'Strona informuje użytkowników o używaniu cookies.',fix:null});
   const trackers=[];
   if(d.hasGA) trackers.push('Google Analytics');
   if(d.hasFB) trackers.push('Facebook Pixel');
   if(d.hasHotjar) trackers.push('Hotjar');
-  if(trackers.length&&!d.hasCookieBanner) f.push({s:js?'amber':'red',t:`Trackery ${js?'bez widocznego w HTML':'bez'} banera cookie: ${trackers.join(', ')}`,src:'html',w:'Na stronie są narzędzia śledzące użytkowników, ale nie znaleźliśmy banera cookie w kodzie HTML.'+jsNote+(js?'':' Według RODO użytkownik musi wyrazić zgodę zanim te narzędzia zaczną działać.'),fix:js?'Jeśli baner cookie jest ładowany dynamicznie przez JS — sprawdź czy blokuje trackery do wyrażenia zgody.':'Dodaj baner cookie (np. Cookiebot, CookieYes) który blokuje trackery do momentu wyrażenia zgody.'});
-  else if(trackers.length) f.push({s:'green',t:`Trackery wykryte, baner cookie obecny: ${trackers.join(', ')}`,src:'html',w:'Znaleźliśmy narzędzia analityczne i baner cookie. Upewnij się że trackery uruchamiają się dopiero po wyrażeniu zgody przez użytkownika.',fix:null});
-  if(d.hasForms&&!d.formHasConsent) f.push({s:'amber',t:'Formularz bez widocznego checkboxa zgody',src:'html',w:'Jeśli formularz zbiera dane do marketingu, wymagana jest oddzielna zgoda użytkownika.',fix:'Dodaj checkbox z tekstem zgody marketingowej oddzielony od zgody na regulamin.'});
+  const hasTrackers=trackers.length>0;
+  if(!d.hasPrivacy&&hasTrackers) f.push({s:js?'amber':'amber',t:'Nie znaleziono linku do polityki prywatności w HTML',src:'html',w:'Nie znaleźliśmy linku do polityki prywatności w kodzie HTML strony.'+jsNote+(js?'':' Jeśli link jest dodawany przez JavaScript (np. w banerze cookie), może być obecny ale niewidoczny dla naszej analizy.')+' Polityka prywatności jest wymagana gdy strona zbiera jakiekolwiek dane.',fix:js?'Jeśli link jest ładowany przez JS, rozważ dodanie go też w statycznym HTML (lepiej dla SEO i dostępności).':'Upewnij się że link do polityki prywatności jest widoczny w stopce strony (bezpośrednio w HTML, nie tylko w JS).'});
+  else if(!d.hasPrivacy&&!hasTrackers) f.push({s:'green',t:'Polityka prywatności nie jest wymagana',src:'html',w:'Nie wykryliśmy trackerów ani cookies analitycznych na Twojej stronie. Upewnij się, że nie śledzisz użytkowników, nie zbierasz danych osobowych i nie używasz narzędzi analitycznych po stronie serwera. Jeśli tak jest, polityka prywatności nie jest wymagana.',fix:null});
+  else f.push({s:'green',t:'Polityka prywatności znaleziona',src:'html',w:'Link do polityki prywatności jest widoczny na stronie.',fix:null});
+  if(!d.hasCookieBanner&&hasTrackers) f.push({s:js?'amber':'amber',t:'Nie wykryto banera cookie w HTML',src:'html',w:'Nie znaleźliśmy banera cookie w kodzie HTML.'+jsNote+(js?'':' Jeśli strona używa trackerów analitycznych lub reklamowych, baner cookie z możliwością odrzucenia jest wymagany.'),fix:js?'Jeśli baner cookie jest ładowany przez JS (np. CookieBot, CookieYes) — jest OK. Nie musi być w statycznym HTML.':'Rozważ Cookiebot, CookieYes lub podobne narzędzie.'});
+  else if(!d.hasCookieBanner&&!hasTrackers) f.push({s:'green',t:'Baner cookie nie jest wymagany',src:'html',w:'Nie wykryliśmy trackerów ani cookies analitycznych na Twojej stronie. Upewnij się, że nie śledzisz użytkowników i nie ustawiasz cookies. Jeśli tak jest, baner cookie nie jest wymagany.',fix:null});
+  else f.push({s:'green',t:'Baner cookie wykryty',src:'html',w:'Strona informuje użytkowników o używaniu cookies.',fix:null});
+  if(hasTrackers&&!d.hasCookieBanner) f.push({s:js?'amber':'red',t:`Trackery ${js?'bez widocznego w HTML':'bez'} banera cookie: ${trackers.join(', ')}`,src:'html',w:'Na stronie są narzędzia śledzące użytkowników, ale nie znaleźliśmy banera cookie w kodzie HTML.'+jsNote+(js?'':' Według RODO użytkownik musi wyrazić zgodę zanim te narzędzia zaczną działać.'),fix:js?'Jeśli baner cookie jest ładowany dynamicznie przez JS — sprawdź czy blokuje trackery do wyrażenia zgody.':'Dodaj baner cookie (np. Cookiebot, CookieYes) który blokuje trackery do momentu wyrażenia zgody.'});
+  else if(hasTrackers) f.push({s:'green',t:`Trackery wykryte, baner cookie obecny: ${trackers.join(', ')}`,src:'html',w:'Znaleźliśmy narzędzia analityczne i baner cookie. Upewnij się że trackery uruchamiają się dopiero po wyrażeniu zgody przez użytkownika.',fix:null});
+  if(d.hasForms&&!d.formHasConsent) f.push({s:'amber',t:'Formularz bez widocznego checkboxa zgody',src:'html',w:'Jeśli formularz zbiera dane do celów marketingowych (newsletter, remarketing), checkbox zgody jest wymagany przez RODO. Dla prostych formularzy kontaktowych (zapytanie ofertowe, kontakt) oddzielny checkbox nie jest konieczny.',fix:'Jeśli formularz służy do marketingu: dodaj checkbox z tekstem zgody. Jeśli to prosty formularz kontaktowy, checkbox nie jest wymagany.'});
   if(d.hasExternalGoogleFonts) f.push({s:'amber',t:'Google Fonts ładowane z serwerów Google',src:'html',w:'Strona ładuje czcionki z fonts.googleapis.com. Według wyroków sądowych w UE (m.in. niemiecki wyrok LG München, 2022) przekazywanie adresu IP użytkownika do Google bez zgody narusza RODO. Google Fonts przesyła IP do serwerów Google przy każdym załadowaniu strony.',fix:'Pobierz fonty lokalnie (self-hosting). Narzędzie: google-webfonts-helper.herokuapp.com. W WordPress: wtyczka OMGF.'});
   if(d.hasMixedContent) f.push({s:'amber',t:`${d.mixedContent} zasobów ładowanych bez szyfrowania (HTTP)`,src:'html',w:'Na stronie HTTPS znaleźliśmy zasoby ładowane przez nieszyfrowane HTTP. Przeglądarki blokują takie zasoby (obrazki, skrypty, style) lub wyświetlają ostrzeżenie. Psuje to wygląd strony i obniża zaufanie.',fix:'Zmień wszystkie adresy zasobów z http:// na https://.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
-    chk(d.hasPrivacy?true:d.wordCount>0?false:null, 'Link do polityki prywatności', !d.hasPrivacy&&d.wordCount===0?'nie udało się w pełni przeanalizować strony':null),
+    chk(d.hasPrivacy?true:hasTrackers?(d.wordCount>0?false:null):true, 'Link do polityki prywatności', !d.hasPrivacy&&!hasTrackers?'nie wymagana (brak trackerów)':!d.hasPrivacy&&d.wordCount===0?'nie udało się w pełni przeanalizować strony':null),
     chk(d.hasTerms?true:d.wordCount>0?false:null, 'Link do regulaminu', !d.hasTerms&&d.wordCount===0?'nie udało się w pełni przeanalizować strony':null),
-    chk(!!d.hasCookieBanner, 'Baner cookie / zgoda na śledzenie'),
+    chk(d.hasCookieBanner?true:!hasTrackers?true:false, 'Baner cookie / zgoda na śledzenie', !d.hasCookieBanner&&!hasTrackers?'nie wymagany (brak trackerów)':null),
     ...(d.hasGA?[chk(d.hasCookieBanner, 'Google Analytics za zgodą użytkownika', 'GA wykryte na stronie')]:[]),
     ...(d.hasFB?[chk(d.hasCookieBanner, 'Facebook Pixel za zgodą użytkownika', 'Pixel wykryty na stronie')]:[]),
     ...(d.hasHotjar?[chk(d.hasCookieBanner, 'Hotjar za zgodą użytkownika', 'Hotjar wykryty na stronie')]:[]),
-    ...(!d.hasGA&&!d.hasFB&&!d.hasHotjar?[chk(true, 'Brak trackerów zewnętrznych')]:[]),
-    ...(d.hasForms?[chk(d.formHasConsent, 'Formularze z checkboxem zgody', d.formCount+' formularzy')]:[]),
+    ...(!hasTrackers?[chk(true, 'Brak trackerów zewnętrznych')]:[]),
+    ...(d.hasForms?[chk(d.formHasConsent?true:null, 'Formularz z checkboxem zgody', !d.formHasConsent?'wymagany tylko przy marketingu':'')]:[]),
     chk(!d.hasExternalGoogleFonts, 'Google Fonts lokalnie (nie z serwerów Google)', d.hasExternalGoogleFonts?'fonts.googleapis.com wykryte':null),
     chk(!d.hasMixedContent, 'Brak mixed content (HTTP na HTTPS)', d.hasMixedContent?d.mixedContent+' zasobów przez HTTP':null),
   ]);
