@@ -331,7 +331,13 @@ h1 em{font-style:italic;color:var(--accent)}
 .feedback-btn:hover{background:var(--accent2);transform:scale(1.05);box-shadow:0 6px 28px rgba(91,79,232,0.45)}
 
 /* ── FOOTER ── */
-footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--ink3)}
+footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--ink3)}
+.footer-inner{max-width:720px;margin:0 auto;display:flex;justify-content:space-between;gap:32px;flex-wrap:wrap}
+.footer-col{display:flex;flex-direction:column;gap:6px}
+.footer-col-title{font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink2);margin-bottom:4px}
+.footer-col a{color:var(--accent);text-decoration:none;transition:opacity .2s}
+.footer-col a:hover{opacity:0.7}
+.footer-copy{width:100%;text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
 
 @media(max-width:540px){
   .input-wrap{flex-direction:column}
@@ -435,7 +441,19 @@ footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);fo
 </div>
 <div id="report"></div>
 
-<footer>Dr.Strona MVP · analiza techniczna, nie porada prawna · 2026</footer>
+<footer>
+<div class="footer-inner">
+  <div class="footer-col">
+    <div class="footer-col-title">Kontakt</div>
+    <a href="https://www.linkedin.com/in/pawellewinski/" target="_blank" rel="noopener">Skontaktuj się bezpośrednio</a>
+  </div>
+  <div class="footer-col">
+    <div class="footer-col-title">Inne produkty</div>
+    <a href="https://aiprzewodnik.pl" target="_blank" rel="noopener">aiprzewodnik.pl</a>
+  </div>
+  <div class="footer-copy">Dr.Strona MVP · analiza techniczna, nie porada prawna · 2026</div>
+</div>
+</footer>
 
 <script>
 /* ── EKG ANIMATION ── */
