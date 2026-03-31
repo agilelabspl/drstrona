@@ -753,7 +753,7 @@ async function runAnalysis(url){
   else if(doc.querySelector('[ng-app],[ng-controller]')||html.includes('ng-version')) R.jsFramework='Angular';
   else if(html.includes('__SVELTE__')||html.includes('svelte')) R.jsFramework='Svelte';
   else if(doc.querySelector('#app[data-v-]')||doc.querySelector('[data-v-]')||html.includes('Vue.js')||html.includes('vue.min.js')||html.includes('vue.global')) R.jsFramework='Vue';
-  else if(html.includes('react')||html.includes('_reactRoot')||doc.querySelector('[data-reactroot],[data-reactid]')) R.jsFramework='React';
+  else if(html.includes('react-dom')||html.includes('react.production')||html.includes('react.development')||html.includes('_reactRoot')||html.includes('__REACT_DEVTOOLS')||doc.querySelector('[data-reactroot],[data-reactid]')) R.jsFramework='React';
   else if(html.includes('wix-thunderbolt')||html.includes('wixstatic.com')||html.includes('wix-code-sdk')) R.jsFramework='Wix';
   else if(html.includes('squarespace')||html.includes('sqsp.net')||html.includes('sqs-') ) R.jsFramework='Squarespace';
   else if(html.includes('webflow.com')||html.includes('wf-page')||html.includes('w-webflow')) R.jsFramework='Webflow';
