@@ -1166,12 +1166,9 @@ function renderReport(d,url){
       <div class="rec-diagnoza-text">${stitle}. ${stext}</div>
     </div>
 
-    ${buildSEO(d)}
-
-    <div id="gateMessage" style="text-align:center;padding:16px 40px;font-size:13px;color:var(--ink3);font-family:var(--ff-mono)">Pozostałe 6 recept wymaga zalogowania</div>
-
     <div id="gatedContent" class="gate-wrap">
       <div id="gatedBlur" class="gate-blur">
+        ${buildSEO(d)}
         ${buildSpeed(d)}
         ${buildIndex(d)}
         ${buildStructure(d)}
@@ -1183,8 +1180,8 @@ function renderReport(d,url){
       <div id="gateOverlay" class="gate-overlay">
         <div class="gate-card">
           <div class="gate-icon">🔒</div>
-          <h3>Zaloguj się żeby zobaczyć pełny wynik</h3>
-          <p>Widzisz 1 z 7 recept. Zaloguj się przez Google żeby odblokować pełne wyniki badania.</p>
+          <h3>Twoje recepty są gotowe</h3>
+          <p>Dr.Strona przygotował dla Ciebie 7 badań i recept dla <strong>${esc(d.domain)}</strong>. Zaloguj się żeby zobaczyć co i jak poprawić.</p>
           <div id="gateForm">
             <div class="gate-btn-wrap" id="gateLoginBtn"></div>
             <div class="gate-hint">Darmowe. Używamy tylko Twojego imienia i emaila.</div>
