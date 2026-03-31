@@ -319,6 +319,41 @@ h1 em{font-style:italic;color:var(--accent)}
 .gate-locked{display:flex;align-items:center;gap:8px;justify-content:center;font-size:14px;color:var(--ink2);margin-top:20px;margin-bottom:-4px;font-weight:500}
 .gate-locked::before{content:'';width:12px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239C9489' stroke-width='2'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0110 0v4'/%3E%3C/svg%3E") no-repeat center/contain}
 
+/* ── STEPS BANNER ── */
+.steps-banner{
+  display:flex;align-items:stretch;justify-content:center;gap:0;
+  max-width:680px;margin:28px auto 0;
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;
+}
+.step-item{
+  flex:1;padding:18px 16px;text-align:center;position:relative;
+}
+.step-item:not(:last-child){border-right:1px solid var(--border)}
+.step-item:last-child{background:rgba(91,79,232,0.05)}
+.step-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:50%;
+  background:var(--bg3);color:var(--ink2);
+  font-family:var(--ff-mono);font-size:12px;font-weight:600;
+  margin-bottom:8px;
+}
+.step-item:last-child .step-num{background:var(--accent);color:white}
+.step-text{font-size:13px;color:var(--ink2);line-height:1.4;font-weight:500}
+.step-item:last-child .step-text{color:var(--accent);font-weight:600}
+.step-arrow{
+  position:absolute;right:-8px;top:50%;transform:translateY(-50%);
+  color:var(--ink3);font-size:14px;z-index:2;
+  background:var(--card);width:16px;height:16px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:50%;
+}
+@media(max-width:540px){
+  .steps-banner{flex-direction:column}
+  .step-item:not(:last-child){border-right:none;border-bottom:1px solid var(--border)}
+  .step-arrow{display:none}
+}
+
 /* ── COPY FOR AI BUTTON ── */
 .copy-ai-btn{
   display:none;width:100%;padding:18px 24px;margin:0;
@@ -442,6 +477,21 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
     <span class="check-pill">Struktura techniczna</span>
     <span class="check-pill">RODO i prywatność</span>
     <span class="check-pill">UX i wiarygodność</span>
+  </div>
+
+  <div class="steps-banner">
+    <div class="step-item">
+      <div class="step-num">1</div><div class="step-arrow">→</div>
+      <div class="step-text">Wklej adres strony</div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div><div class="step-arrow">→</div>
+      <div class="step-text">Otrzymaj diagnozę i receptę</div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div class="step-text">Wklej do AI i napraw stronę</div>
+    </div>
   </div>
 </div>
 
