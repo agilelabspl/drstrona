@@ -319,6 +319,17 @@ h1 em{font-style:italic;color:var(--accent)}
 .gate-locked{display:flex;align-items:center;gap:8px;justify-content:center;font-size:14px;color:var(--ink2);margin-top:20px;margin-bottom:-4px;font-weight:500}
 .gate-locked::before{content:'';width:12px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239C9489' stroke-width='2'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0110 0v4'/%3E%3C/svg%3E") no-repeat center/contain}
 
+/* ── COPY FOR AI BUTTON ── */
+.copy-ai-btn{
+  display:none;width:100%;padding:18px 24px;margin:0;
+  background:var(--bg2);border:1.5px dashed var(--border2);border-left:none;border-right:none;
+  font-family:var(--ff-sans);font-size:15px;font-weight:500;color:var(--ink2);
+  cursor:pointer;transition:background .2s,color .2s;
+  text-align:center;letter-spacing:0.01em;
+}
+.copy-ai-btn:hover{background:var(--bg3);color:var(--ink)}
+.copy-ai-btn.copied{background:var(--green-bg);border-color:var(--green-bd);color:var(--green)}
+
 /* ── FEEDBACK BUTTON ── */
 .feedback-btn{
   display:none;position:fixed;bottom:24px;right:24px;z-index:99;
@@ -1088,6 +1099,7 @@ async function runAnalysis(url){
   _cv(_sc('m-struct'), R.structScore);
   _cv(_sc('m-priv'), R.privScore);
 
+  _lastReportData=R;
   return R;
 }
 
@@ -1168,6 +1180,8 @@ function renderReport(d,url){
       <div class="rec-diagnoza-label">Diagnoza</div>
       <div class="rec-diagnoza-text">${stitle}. ${stext}</div>
     </div>
+
+    <button class="copy-ai-btn" id="copyAiBtn" onclick="copyReportForAI()">Skopiuj raport i wklej do swojego AI</button>
 
     <div id="gatedContent" class="gate-wrap">
       <div id="gatedBlur" class="gate-blur">
@@ -1544,6 +1558,8 @@ function unlockContent(){
   const success = document.getElementById('gateSuccess');
   if(form) form.style.display='none';
   if(success) success.style.display='block';
+  const copyBtn = document.getElementById('copyAiBtn');
+  if(copyBtn) copyBtn.style.display='block';
 }
 
 function saveUserToKV(){
@@ -1640,6 +1656,134 @@ function buildGood(d){
       ${g.map(x=>`<div class="ok-item"><div class="ok-icon">✓</div><span>${x}</span></div>`).join('')}
     </div>
   </div>`;
+}
+
+let _lastReportData=null;
+
+function buildReportText(d){
+  const ln=s=>s+'\n';
+  const sec=(title,score)=>'\n'+('='.repeat(50))+'\n'+title+(score!=null?' — '+score+'/100':'')+'\n'+('='.repeat(50));
+  let t='';
+
+  t+=ln('AUDYT STRONY: '+d.domain);
+  t+=ln('Data: '+d.ts);
+  t+=ln('Narzędzie: dr Strona (drstrona.pl)');
+  t+=ln('');
+  t+=ln('WYNIKI:');
+  t+=ln('  SEO: '+d.seoScore+'/100');
+  t+=ln('  Szybkość: '+(d.mobileScore!=null?d.mobileScore+'/100':'brak danych'));
+  t+=ln('  AI Ready: '+d.aiScore+'/100');
+  t+=ln('  Indeksowanie: '+d.indexScore+'/100');
+  t+=ln('  Struktura: '+d.structScore+'/100');
+  t+=ln('  RODO: '+d.privScore+'/100');
+
+  t+=sec('SEO',d.seoScore);
+  t+=ln('Tytuł: '+(d.title||'BRAK')+' ('+(d.titleLength||0)+' znaków)');
+  t+=ln('Meta description: '+(d.metaDesc||'BRAK')+' ('+(d.descLength||0)+' znaków)');
+  if(d.duplicateDesc) t+=ln('UWAGA: Zduplikowany meta description ('+d.duplicateDescCount+'×)');
+  t+=ln('Canonical: '+(d.canonical||'BRAK'));
+  if(d.canonicalConflict) t+=ln('UWAGA: Canonical wskazuje na inny adres: '+d.canonicalTarget);
+  t+=ln('Open Graph: '+(d.hasOG?'tak':'brak'));
+  t+=ln('Język strony: '+(d.lang||'nieustawiony'));
+  t+=ln('H1: '+(d.h1Count===0?'BRAK':d.h1Count+' — "'+d.h1Text+'"'));
+  t+=ln('H2: '+d.h2Count+', H3: '+d.h3Count);
+  if(d.brokenHeadingHierarchy) t+=ln('UWAGA: Przeskoczona hierarchia nagłówków (H1→H3 bez H2)');
+  t+=ln('Ilość słów: '+d.wordCount);
+  if(d.hasGenericLinks) t+=ln('Linki z ogólnikowym tekstem: '+d.genericLinks);
+
+  t+=sec('Szybkość',d.mobileScore);
+  t+=ln('Mobile: '+(d.mobileScore!=null?d.mobileScore+'/100':'brak danych'));
+  t+=ln('Desktop: '+(d.desktopScore!=null?d.desktopScore+'/100':'brak danych'));
+  if(d.lcp) t+=ln('LCP (mobile): '+d.lcp);
+  if(d.cls) t+=ln('CLS (mobile): '+d.cls);
+  if(d.fcp) t+=ln('FCP (mobile): '+d.fcp);
+  if(d.tbt) t+=ln('TBT (mobile): '+d.tbt);
+  if(d.dLcp) t+=ln('LCP (desktop): '+d.dLcp);
+  if(d.hasUnminified) t+=ln('Niezminifikowane pliki: '+d.unminifiedJS+' JS, '+d.unminifiedCSS+' CSS');
+  if(d.hasBlockingScripts) t+=ln('Skrypty blokujące rendering: '+d.blockingScripts);
+  if(d.totalImages>3&&!d.hasLazyLoading) t+=ln('Obrazki bez lazy loading: '+d.imgsNoLazy+' z '+d.totalImages);
+
+  t+=sec('Indeksowanie',d.indexScore);
+  t+=ln('Sitemap: '+d.sitemapStatus);
+  t+=ln('Robots.txt: '+d.robotsStatus);
+  if(d.hasNoindex) t+=ln('KRYTYCZNE: Strona ma noindex!');
+  if(d.hasNofollow) t+=ln('UWAGA: Strona ma nofollow');
+  t+=ln('HTTPS: '+(d.isHttps?'tak':'nie'));
+  t+=ln('HSTS: '+(d.hasHSTS?'tak':'nie'));
+  t+=ln('Przekierowania: '+(d.hasRedirects?d.redirectCount:'brak'));
+  t+=ln('Linki wewnętrzne: '+d.internalLinks+', zewnętrzne: '+d.externalLinks);
+
+  t+=sec('Struktura',d.structScore);
+  t+=ln('Schema.org: '+(d.hasSchema?'tak ('+d.schemaTypes.join(', ')+')':'BRAK'));
+  if(d.hasSchemaErrors) t+=ln('Błędy schema: '+d.schemaErrors.join(', '));
+  t+=ln('Obrazki bez alt: '+d.imgsNoAlt+' z '+d.totalImages);
+  t+=ln('Text-to-HTML ratio: '+d.textToHtmlRatio+'%');
+  if(d.hasEmptyLinks) t+=ln('Puste linki (bez tekstu): '+d.emptyLinks);
+
+  t+=sec('AI Ready (GEO)',d.aiScore);
+  t+=ln('llms.txt: '+d.llmsStatus);
+  t+=ln('GPTBot: '+(d.gptBlocked?'ZABLOKOWANY':'dostęp otwarty'));
+  t+=ln('ClaudeBot: '+(d.claudeBlocked?'ZABLOKOWANY':'dostęp otwarty'));
+  t+=ln('PerplexityBot: '+(d.perplexityBlocked?'ZABLOKOWANY':'dostęp otwarty'));
+  t+=ln('Autor (E-E-A-T): '+(d.hasAuthor||d.hasAuthorSchema?'tak':'brak'));
+  t+=ln('Data aktualizacji: '+(d.hasDateModified?d.freshnessSource:'brak'));
+  t+=ln('Formaty AEO: '+(d.hasAEOFormats?d.listCount+' list, '+d.tableCount+' tabel, '+d.dlCount+' definicji':'brak'));
+
+  t+=sec('RODO',d.privScore);
+  t+=ln('Polityka prywatności: '+(d.hasPrivacy?'znaleziona':'BRAK'));
+  t+=ln('Regulamin: '+(d.hasTerms?'znaleziony':'brak'));
+  t+=ln('Baner cookie: '+(d.hasCookieBanner?'wykryty':'BRAK'));
+  const trackers=[];
+  if(d.hasGA) trackers.push('Google Analytics');
+  if(d.hasFB) trackers.push('Facebook Pixel');
+  if(d.hasHotjar) trackers.push('Hotjar');
+  if(trackers.length) t+=ln('Trackery: '+trackers.join(', ')+(d.hasCookieBanner?' (baner obecny)':' (BRAK banera!)'));
+  if(d.hasExternalGoogleFonts) t+=ln('UWAGA: Google Fonts z zewnętrznego serwera (ryzyko RODO)');
+  if(d.hasMixedContent) t+=ln('Mixed content: '+d.mixedContent+' zasobów przez HTTP');
+  if(d.hasForms) t+=ln('Formularze: '+d.formCount+(d.formHasConsent?' (checkbox zgody obecny)':' (BRAK checkboxa zgody)'));
+
+  t+=sec('UX i wiarygodność',null);
+  t+=ln('CTA: '+(d.hasCTA?d.ctaCount+' znalezionych':'BRAK'));
+  t+=ln('Telefon: '+(d.hasPhone?'tak':'brak'));
+  t+=ln('Email: '+(d.hasEmail?'tak':'brak'));
+  t+=ln('Adres/NIP: '+(d.hasAddress?'tak':'brak'));
+  t+=ln('Social media: '+(d.hasSocial?d.socialLinks.join(', '):'brak'));
+  t+=ln('Strona "O nas": '+(d.hasAbout?'tak':'brak'));
+  t+=ln('Responsywność: '+(d.hasViewport?'tak':'brak'));
+  t+=ln('Sygnały zaufania: '+d.hasTrustBadges+'/6');
+
+  if(d.isJSHeavy) t+='\n\nUWAGA: Strona używa frameworka JavaScript'+(d.jsFramework?' ('+d.jsFramework+')':'')+'. Niektóre elementy mogą być renderowane dynamicznie i niewidoczne w analizie statycznego HTML.\n';
+
+  return t;
+}
+
+function copyReportForAI(){
+  if(!_lastReportData) return;
+  const d=_lastReportData;
+  const prompt=`Jestem właścicielem strony ${d.domain}. Poniżej jest raport z audytu mojej strony wygenerowany przez dr Strona (drstrona.pl). Raport sprawdza 6 obszarów: SEO, szybkość, widoczność w AI (GEO), indeksowanie, strukturę techniczną i zgodność z RODO.
+
+Potrzebuję Twojej pomocy. Na podstawie tego raportu:
+
+1. Wskaż 3 najważniejsze problemy do naprawienia (te które mają największy wpływ na widoczność mojej strony w Google i w narzędziach AI takich jak ChatGPT, Perplexity, Gemini).
+
+2. Dla każdego problemu napisz konkretną instrukcję naprawy krok po kroku. Pisz prosto, zakładaj że nie jestem programistą. Jeśli muszę coś zmienić w kodzie, podaj dokładnie co i gdzie.
+
+3. Dla każdego problemu wyjaśnij co tracę jeśli tego NIE naprawię (konkretne konsekwencje biznesowe: utrata ruchu, niewidoczność w Google, problemy prawne itp.).
+
+Jeśli moja strona jest na WordPressie, Wix, Squarespace lub innym CMS — podaj instrukcje specyficzne dla tej platformy.
+
+Oto raport:
+${'─'.repeat(50)}
+
+`;
+  const fullText=prompt+buildReportText(d);
+  navigator.clipboard.writeText(fullText).then(()=>{
+    gtag('event','copy_report_for_ai',{event_label:d.domain});
+    const btn=document.getElementById('copyAiBtn');
+    btn.textContent='Skopiowano! Wklej do ChatGPT, Claude lub Gemini';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='Skopiuj raport i wklej do swojego AI'; btn.classList.remove('copied'); },4000);
+  });
 }
 </script>
 <a class="feedback-btn" id="feedbackBar" href="https://forms.gle/k7rtbYoYJ9z8LDTx6" target="_blank" rel="noopener">Feedback do MVP</a>
