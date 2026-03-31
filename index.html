@@ -321,13 +321,14 @@ h1 em{font-style:italic;color:var(--accent)}
 
 /* ── COPY FOR AI BUTTON ── */
 .copy-ai-btn{
-  display:none;width:100%;padding:18px 24px;margin:0;
-  background:var(--bg2);border:1.5px dashed var(--border2);border-left:none;border-right:none;
-  font-family:var(--ff-sans);font-size:15px;font-weight:500;color:var(--ink2);
-  cursor:pointer;transition:background .2s,color .2s;
+  display:none;width:100%;padding:20px 24px;margin:0;
+  background:rgba(91,79,232,0.06);border:none;border-top:1.5px solid var(--border);border-bottom:1.5px solid var(--border);
+  font-family:var(--ff-sans);font-size:16px;font-weight:600;color:var(--accent);
+  cursor:pointer;transition:background .2s,transform .1s;
   text-align:center;letter-spacing:0.01em;
 }
-.copy-ai-btn:hover{background:var(--bg3);color:var(--ink)}
+.copy-ai-btn:hover{background:rgba(91,79,232,0.12);transform:scale(1.01)}
+.copy-ai-btn:active{transform:scale(0.99)}
 .copy-ai-btn.copied{background:var(--green-bg);border-color:var(--green-bd);color:var(--green)}
 
 /* ── FEEDBACK BUTTON ── */
@@ -1181,7 +1182,7 @@ function renderReport(d,url){
       <div class="rec-diagnoza-text">${stitle}. ${stext}</div>
     </div>
 
-    <button class="copy-ai-btn" id="copyAiBtn" onclick="copyReportForAI()">Skopiuj raport i wklej do swojego AI</button>
+    <button class="copy-ai-btn" id="copyAiBtn" onclick="copyReportForAI()">📋 Skopiuj raport i wklej do swojego AI →</button>
 
     <div id="gatedContent" class="gate-wrap">
       <div id="gatedBlur" class="gate-blur">
