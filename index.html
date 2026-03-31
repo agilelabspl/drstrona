@@ -323,30 +323,30 @@ h1 em{font-style:italic;color:var(--accent)}
 .steps-banner{
   display:flex;align-items:stretch;justify-content:center;gap:0;
   max-width:680px;margin:28px auto 0;
-  background:var(--card);border:1px solid var(--border);border-radius:14px;
-  overflow:hidden;
+  background:var(--card);border:1.5px solid var(--border2);border-radius:14px;
+  overflow:hidden;box-shadow:0 2px 12px rgba(26,23,20,0.06);
 }
 .step-item{
-  flex:1;padding:18px 16px;text-align:center;position:relative;
+  flex:1;padding:20px 16px;text-align:center;position:relative;
 }
-.step-item:not(:last-child){border-right:1px solid var(--border)}
-.step-item:last-child{background:rgba(91,79,232,0.05)}
+.step-item:not(:last-child){border-right:1.5px solid var(--border2)}
+.step-item:last-child{background:rgba(91,79,232,0.08)}
 .step-num{
   display:inline-flex;align-items:center;justify-content:center;
-  width:24px;height:24px;border-radius:50%;
-  background:var(--bg3);color:var(--ink2);
-  font-family:var(--ff-mono);font-size:12px;font-weight:600;
-  margin-bottom:8px;
+  width:32px;height:32px;border-radius:50%;
+  background:var(--ink);color:white;
+  font-family:var(--ff-mono);font-size:15px;font-weight:700;
+  margin-bottom:10px;
 }
-.step-item:last-child .step-num{background:var(--accent);color:white}
-.step-text{font-size:13px;color:var(--ink2);line-height:1.4;font-weight:500}
-.step-item:last-child .step-text{color:var(--accent);font-weight:600}
+.step-item:last-child .step-num{background:var(--accent)}
+.step-text{font-size:14px;color:var(--ink);line-height:1.4;font-weight:600}
+.step-item:last-child .step-text{color:var(--accent);font-weight:700}
 .step-arrow{
   position:absolute;right:-8px;top:50%;transform:translateY(-50%);
-  color:var(--ink3);font-size:14px;z-index:2;
+  color:var(--ink3);font-size:16px;z-index:2;
   background:var(--card);width:16px;height:16px;
   display:flex;align-items:center;justify-content:center;
-  border-radius:50%;
+  border-radius:50%;font-weight:700;
 }
 @media(max-width:540px){
   .steps-banner{flex-direction:column}
@@ -490,7 +490,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
     </div>
     <div class="step-item">
       <div class="step-num">3</div>
-      <div class="step-text">Wklej do AI i napraw stronę</div>
+      <div class="step-text">Gotowy prompt dla Twojego AI</div>
     </div>
   </div>
 </div>
