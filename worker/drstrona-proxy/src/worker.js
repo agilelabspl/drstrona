@@ -1,3 +1,20 @@
+// ── RATE LIMITING (KV-based, per IP) ──
+const RATE_LIMIT = 20;       // max requests
+const RATE_WINDOW = 60;      // per 60 seconds
+
+async function checkRateLimit(ip, kv) {
+  const key = `rl:${ip}`;
+  const data = await kv.get(key, 'json');
+  const now = Date.now();
+  if (data && (now - data.start) < RATE_WINDOW * 1000) {
+    if (data.count >= RATE_LIMIT) return false;
+    await kv.put(key, JSON.stringify({ start: data.start, count: data.count + 1 }), { expirationTtl: RATE_WINDOW });
+    return true;
+  }
+  await kv.put(key, JSON.stringify({ start: now, count: 1 }), { expirationTtl: RATE_WINDOW });
+  return true;
+}
+
 export default {
   async fetch(request, env) {
     const allowedOrigins = ['https://www.drstrona.pl', 'https://drstrona.pl', 'http://localhost:3000'];
@@ -49,6 +66,20 @@ export default {
       });
     }
 
+    // ── RATE LIMIT CHECK ──
+    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const allowed = await checkRateLimit(clientIP, env.USERS);
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again in a minute.' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
+      });
+    }
+
+    // ── REFERER/ORIGIN CHECK for proxy requests ──
+    const referer = request.headers.get('Referer') || '';
+    const isLegitRequest = allowedOrigins.includes(reqOrigin) || allowedOrigins.some(o => referer.startsWith(o));
+
     try {
       const chain = [target];
       let currentUrl = target;
@@ -79,8 +110,9 @@ export default {
         const hsts = resp.headers.get('Strict-Transport-Security') || '';
 
         // Sprawdź czy HTML jest "pusty" (SPA/JS-heavy)
+        // Browser rendering only for legitimate requests (costly operation)
         let renderedVia = 'fetch';
-        if (isJSHeavy(body) && env.CF_ACCOUNT_ID && env.CF_BR_TOKEN) {
+        if (isLegitRequest && isJSHeavy(body) && env.CF_ACCOUNT_ID && env.CF_BR_TOKEN) {
           try {
             const rendered = await renderWithBrowser(currentUrl, env);
             if (rendered && rendered.length > body.length) {
