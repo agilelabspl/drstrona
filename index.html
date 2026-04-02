@@ -17,12 +17,8 @@
 <link rel="stylesheet" href="https://fonts.bunny.net/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap">
 <!-- Google Sign-In -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<!-- Google Analytics 4 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-S3NVC7K6R4"></script>
-<script>
-window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
-gtag('js',new Date());gtag('config','G-S3NVC7K6R4');
-</script>
+<!-- Cookie Consent + GA4 (ładowane po zgodzie) -->
+<script src="cookie-consent.js" defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -787,7 +783,7 @@ async function runAnalysis(url){
   R.schemas=schemas.map(s=>{try{return JSON.parse(s.textContent)}catch{return null}}).filter(Boolean);
   R.hasSchema=R.schemas.length>0;
   R.schemaTypes=R.schemas.map(s=>s['@type']||'unknown').filter(Boolean);
-  R.isHttps=url.startsWith('https');
+  R.isHttps=(R.finalUrl||url).startsWith('https');
   R.titleLength=R.title?R.title.length:0;
   R.descLength=R.metaDesc?R.metaDesc.length:0;
 
@@ -918,7 +914,7 @@ async function runAnalysis(url){
   // contact info
   const bodyLower=bodyText.toLowerCase();
   const htmlLower=html.toLowerCase();
-  R.hasPhone=!!(bodyText.match(/[\+]?[\d\s\-]{9,15}/)||htmlLower.includes('tel:'));
+  R.hasPhone=!!(bodyText.match(/(?:\+\d{1,3}[\s\-]?)?\d[\d\s\-]{7,13}\d/)||htmlLower.includes('tel:'));
   R.hasEmail=!!(bodyText.match(/[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)||htmlLower.includes('mailto:'));
   R.hasAddress=bodyLower.includes('ul.')||bodyLower.includes('ul ')||bodyLower.includes('ulica')||bodyLower.includes('nip')||bodyLower.includes('regon');
   // social media
@@ -932,7 +928,7 @@ async function runAnalysis(url){
   R.hasForms=forms.length>0;
   R.formCount=forms.length;
   R.formHasConsent=forms.some(f=>f.querySelector('input[type="checkbox"]'));
-  R.formHasLabels=forms.every(f=>[...f.querySelectorAll('input:not([type="hidden"]):not([type="submit"])')].every(i=>i.hasAttribute('aria-label')||i.hasAttribute('placeholder')||doc.querySelector('label[for="'+i.id+'"]')));
+  R.formHasLabels=forms.every(f=>[...f.querySelectorAll('input:not([type="hidden"]):not([type="submit"])')].every(i=>i.hasAttribute('aria-label')||doc.querySelector('label[for="'+i.id+'"]')));
   // links
   const links=[...doc.querySelectorAll('a')].map(a=>(a.textContent+' '+(a.getAttribute('href')||'')).toLowerCase());
   R.hasPrivacy=links.some(t=>t.includes('prywatno')||t.includes('privacy'));
@@ -1110,10 +1106,9 @@ async function runAnalysis(url){
     }
     return null;
   }
-  const mobResult=await fetchPS('mobile');
+  const [mobResult, dskResult]=await Promise.all([fetchPS('mobile'), fetchPS('desktop')]);
   if(mobResult){R.mobileScore=mobResult.score;R.lcp=mobResult.lcp;R.cls=mobResult.cls;R.fcp=mobResult.fcp;R.tbt=mobResult.tbt;}
   showStep(6); await delay(300);
-  const dskResult=await fetchPS('desktop');
   if(dskResult){R.desktopScore=dskResult.score;R.dLcp=dskResult.lcp;R.dFcp=dskResult.fcp;R.dCls=dskResult.cls;R.dTbt=dskResult.tbt;}
   R.pageSpeedUrl='https://pagespeed.web.dev/analysis?url='+encodeURIComponent(url);
 
@@ -1615,7 +1610,9 @@ function updateUIForUser(){
 
 function handleLogout(){
   googleUser = null;
+  googleCredential = null;
   localStorage.removeItem('drstrona_user');
+  localStorage.removeItem('drstrona_credential');
   localStorage.removeItem('drstrona_unlocked');
   const loginBtn = document.getElementById('navLoginBtn');
   const userEl = document.getElementById('navUser');
