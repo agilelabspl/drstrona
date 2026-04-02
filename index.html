@@ -683,7 +683,7 @@ function isErrorPage(html){
   return /^(4\d\d|5\d\d)\b/.test(t) || ['forbidden','not found','access denied','error','unauthorized','bad gateway','service unavailable'].some(e=>t.includes(e));
 }
 
-async function fetchViaProxy(targetUrl){
+async function fetchViaProxy(targetUrl, minLen=50){
   const proxies = [
     { url: u => `https://drstrona-proxy.agilelabs-pl.workers.dev/?url=${encodeURIComponent(u)}`, type:'text' },
     { url: u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, type:'text' },
@@ -697,7 +697,7 @@ async function fetchViaProxy(targetUrl){
       clearTimeout(timer);
       if(!res.ok) continue;
       const t = await res.text();
-      if(t?.length > 50 && !isErrorPage(t)) return t;
+      if(t?.length > minLen && !isErrorPage(t)) return t;
     }catch(e){ continue; }
   }
   return null;
@@ -999,24 +999,10 @@ async function runAnalysis(url){
   R.textToHtmlRatio=R.htmlLength>0?Math.round((textLen/R.htmlLength)*100):0;
 
   showStep(3); await delay(200);
+  // Fetch robots.txt first — needed for sitemap URL and llms.txt detection
+  let robotsContent='';
   try{
-    const sc = await fetchViaProxy(origin+'/sitemap.xml');
-    if(sc===null) R.sitemapStatus='unknown';
-    else if(sc&&!sc.includes('<!doctype')&&(sc.includes('<urlset')||sc.includes('<sitemapindex'))) R.sitemapStatus='found';
-    else R.sitemapStatus='missing';
-  }catch{R.sitemapStatus='unknown';}
-  R.hasSitemap=R.sitemapStatus==='found';
-
-  showStep(4); await delay(200);
-  try{
-    const lc = await fetchViaProxy(origin+'/llms.txt');
-    if(lc===null) R.llmsStatus='unknown';
-    else if(lc&&lc.length>20&&!lc.toLowerCase().includes('not found')&&!lc.includes('<!doctype')&&!lc.includes('<html')) R.llmsStatus='found';
-    else R.llmsStatus='missing';
-  }catch{R.llmsStatus='unknown';}
-  R.hasLlms=R.llmsStatus==='found';
-  try{
-    const rc = await fetchViaProxy(origin+'/robots.txt');
+    const rc = await fetchViaProxy(origin+'/robots.txt', 5);
     if(rc===null) R.robotsStatus='unknown';
     else { R.robotsStatus=rc.length>5?'found':'missing'; }
     const rt=rc||'';
@@ -1057,7 +1043,52 @@ async function runAnalysis(url){
     R.claudeBlocked=isBlockedInRobots(rt,'claudebot');
     R.perplexityBlocked=isBlockedInRobots(rt,'perplexitybot');
     R.robotsSitemap=rtl.includes('sitemap:');
+    robotsContent=rt;
   }catch{R.hasRobots=false;R.gptBlocked=false;R.claudeBlocked=false;R.perplexityBlocked=false;}
+
+  // Sitemap detection: robots.txt Sitemap: directive → fallback URLs
+  try{
+    let sitemapFound=false;
+    // 1. Extract sitemap URLs from robots.txt
+    if(robotsContent){
+      const sitemapUrls=robotsContent.split('\n')
+        .filter(l=>l.trim().toLowerCase().startsWith('sitemap:'))
+        .map(l=>l.replace(/^sitemap:\s*/i,'').trim())
+        .filter(u=>u.length>0);
+      for(const sUrl of sitemapUrls){
+        try{
+          const sc=await fetchViaProxy(sUrl, 10);
+          if(sc&&!sc.includes('<!doctype')&&(sc.includes('<urlset')||sc.includes('<sitemapindex'))){
+            R.sitemapStatus='found'; sitemapFound=true; break;
+          }
+        }catch{}
+      }
+    }
+    // 2. Fallback: try common sitemap paths
+    if(!sitemapFound){
+      const sitemapPaths=['/sitemap.xml','/sitemap-index.xml','/sitemap_index.xml'];
+      for(const sp of sitemapPaths){
+        try{
+          const sc=await fetchViaProxy(origin+sp, 10);
+          if(sc&&!sc.includes('<!doctype')&&(sc.includes('<urlset')||sc.includes('<sitemapindex'))){
+            R.sitemapStatus='found'; sitemapFound=true; break;
+          }
+        }catch{}
+      }
+    }
+    if(!sitemapFound) R.sitemapStatus=R.sitemapStatus||'missing';
+  }catch{R.sitemapStatus='unknown';}
+  R.hasSitemap=R.sitemapStatus==='found';
+
+  showStep(4); await delay(200);
+  // llms.txt detection with lower threshold
+  try{
+    const lc = await fetchViaProxy(origin+'/llms.txt', 5);
+    if(lc===null) R.llmsStatus='unknown';
+    else if(lc&&lc.length>10&&!lc.toLowerCase().includes('not found')&&!lc.includes('<!doctype')&&!lc.includes('<html')) R.llmsStatus='found';
+    else R.llmsStatus='missing';
+  }catch{R.llmsStatus='unknown';}
+  R.hasLlms=R.llmsStatus==='found';
 
   showStep(5); await delay(500);
   R.mobileScore=null;R.desktopScore=null;
