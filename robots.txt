@@ -2,3 +2,6 @@ User-agent: *
 Allow: /
 
 Sitemap: https://www.drstrona.pl/sitemap.xml
+
+# LLM documentation
+Llms-txt: https://www.drstrona.pl/llms.txt
