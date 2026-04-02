@@ -111,18 +111,13 @@
 
     /* ── 8. Link "Ustawienia cookies" w footerze ── */
     function injectFooterLink() {
-        var footer = document.querySelector('footer');
-        if (!footer) return;
+        var a = document.getElementById('footer-cookie-settings');
+        if (!a) return;
 
-        var a = document.createElement('a');
-        a.href = '#';
-        a.textContent = 'Ustawienia cookies';
-        a.style.cssText = 'color:#5b5ee8;text-decoration:underline;text-underline-offset:2px;font-size:0.8rem;cursor:pointer;display:inline-block;margin-top:0.4rem';
         a.addEventListener('click', function (e) {
             e.preventDefault();
             showBanner();
         });
-        footer.appendChild(a);
     }
 
     /* ── 9. Pokaż / ukryj baner ── */
