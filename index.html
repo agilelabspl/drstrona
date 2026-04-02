@@ -358,7 +358,7 @@ h1 em{font-style:italic;color:var(--accent)}
 
 /* ── FEEDBACK BUTTON ── */
 .feedback-btn{
-  display:none;position:fixed;bottom:24px;right:24px;z-index:99;
+  display:none;position:fixed;bottom:76px;right:24px;z-index:99;
   background:var(--accent);color:white;
   font-size:16px;font-weight:600;font-family:var(--ff-sans);
   border:none;border-radius:12px;padding:14px 28px;
@@ -367,6 +367,18 @@ h1 em{font-style:italic;color:var(--accent)}
   transition:background .2s,transform .1s,box-shadow .2s;
 }
 .feedback-btn:hover{background:var(--accent2);transform:scale(1.05);box-shadow:0 6px 28px rgba(91,79,232,0.45)}
+
+/* ── SUPPORT BUTTON ── */
+.support-btn{
+  display:none;position:fixed;bottom:24px;right:24px;z-index:99;
+  background:transparent;color:var(--accent);
+  font-size:14px;font-weight:600;font-family:var(--ff-sans);
+  border:2px solid var(--accent);border-radius:12px;padding:12px 24px;
+  cursor:pointer;text-decoration:none;
+  box-shadow:0 4px 20px rgba(91,79,232,0.15);
+  transition:background .2s,transform .1s,box-shadow .2s,color .2s;
+}
+.support-btn:hover{background:var(--accent);color:white;transform:scale(1.05);box-shadow:0 6px 28px rgba(91,79,232,0.35)}
 
 /* ── FOOTER ── */
 footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--ink3)}
@@ -1602,10 +1614,12 @@ function updateUIForUser(){
   const userEl = document.getElementById('navUser');
   const nameEl = document.getElementById('navUserName');
   const fb = document.getElementById('feedbackBar');
+  const sb = document.getElementById('supportBar');
   if(loginBtn) loginBtn.style.display='none';
   if(userEl) userEl.style.display='flex';
   if(nameEl) nameEl.textContent = googleUser.name;
   if(fb) fb.style.display='block';
+  if(sb) sb.style.display='block';
 }
 
 function handleLogout(){
@@ -1865,70 +1879,7 @@ ${'─'.repeat(50)}
 }
 </script>
 <a class="feedback-btn" id="feedbackBar" href="https://forms.gle/k7rtbYoYJ9z8LDTx6" target="_blank" rel="noopener">Feedback do MVP</a>
+<a class="support-btn" id="supportBar" href="https://buy.stripe.com/dRmeV536N0Qv0yV12gfAc0b" target="_blank" rel="noopener" onclick="gtag('event','support_click')">Wesprzyj gabinet Dr.Strony</a>
 
-<!-- Exit Intent Share Popup -->
-<div id="shareOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(26,23,20,0.55);backdrop-filter:blur(4px);align-items:center;justify-content:center">
-<div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:40px 36px 32px;max-width:420px;width:90%;text-align:center;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15)">
-<button onclick="closeSharePopup()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;color:var(--ink3);cursor:pointer;padding:4px;line-height:1" aria-label="Zamknij">&times;</button>
-<div style="font-size:36px;margin-bottom:16px">🩺</div>
-<div style="font-family:var(--ff-serif);font-size:22px;font-weight:400;color:var(--ink);margin-bottom:8px">Poleć gabinet Dr.Strony znajomym</div>
-<div style="font-size:15px;color:var(--ink2);margin-bottom:28px;line-height:1.6">Niech też zbadają swoją stronę.<br>Za darmo, 59 sekund.</div>
-<button id="shareBtn" onclick="handleShare()" style="display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--accent);color:white;border:none;border-radius:12px;padding:14px 32px;font-size:15px;font-weight:600;font-family:var(--ff-sans);cursor:pointer;transition:background .2s,transform .1s;width:100%">
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-Poleć Dr.Stronę</button>
-</div>
-</div>
-<script>
-(function(){
-  const SHARE_URL='https://drstrona.pl?ref=share';
-  const SHARE_TEXT='Sprawdź swoją stronę za darmo. Dr.Strona zrobi diagnostykę SEO, szybkości i widoczności w AI w 59 sekund.';
-  const SHARE_TITLE='Dr.Strona — darmowa diagnostyka strony';
-  let popupShown=false;
-  function showPopup(){
-    if(popupShown) return;
-    if(!sessionStorage.getItem('reportDone')) return;
-    popupShown=true;
-    const o=document.getElementById('shareOverlay');
-    o.style.display='flex';
-    gtag('event','share_popup_shown');
-  }
-  // Desktop: exit intent (kursor wychodzi ponad okno)
-  document.addEventListener('mouseout',function(e){
-    if(e.clientY<5&&e.relatedTarget==null) showPopup();
-  });
-  // Mobile/all: scroll depth — koniec raportu + 5s opóźnienia
-  let scrollTriggered=false;
-  window.addEventListener('scroll',function(){
-    if(scrollTriggered||popupShown) return;
-    const report=document.getElementById('report');
-    if(!report||report.style.display==='none') return;
-    const rect=report.getBoundingClientRect();
-    if(rect.bottom<window.innerHeight+100){
-      scrollTriggered=true;
-      setTimeout(showPopup,5000);
-    }
-  },{passive:true});
-  window.closeSharePopup=function(){
-    document.getElementById('shareOverlay').style.display='none';
-    gtag('event','share_popup_closed');
-  };
-  document.getElementById('shareOverlay').addEventListener('click',function(e){
-    if(e.target===this) closeSharePopup();
-  });
-  window.handleShare=function(){
-    gtag('event','share_popup_clicked');
-    if(navigator.share){
-      navigator.share({title:SHARE_TITLE,text:SHARE_TEXT,url:SHARE_URL}).catch(()=>{});
-    } else {
-      navigator.clipboard.writeText(SHARE_TEXT+' '+SHARE_URL).then(()=>{
-        const btn=document.getElementById('shareBtn');
-        btn.innerHTML='✓ Skopiowano! Wyślij znajomemu';
-        btn.style.background='var(--green)';
-        setTimeout(()=>{btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Poleć Dr.Stronę';btn.style.background='var(--accent)';},3000);
-      });
-    }
-  };
-})();
-</script>
 </body>
 </html>
