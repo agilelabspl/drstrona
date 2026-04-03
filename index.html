@@ -351,13 +351,13 @@ h1 em{font-style:italic;color:var(--accent)}
   font-family:var(--ff-sans);font-size:16px;font-weight:600;color:white;
   cursor:pointer;transition:opacity .2s,transform .1s;
   text-align:center;letter-spacing:0.01em;
-  animation:btnPulse 2.5s ease-in-out infinite;
+  animation:btnPulse 2s ease-in-out infinite;
 }
 @keyframes btnPulse{
-  0%,100%{box-shadow:0 0 0 0 rgba(91,79,232,0)}
-  50%{box-shadow:0 0 18px 4px rgba(91,79,232,0.35)}
+  0%,100%{box-shadow:0 0 0 0 rgba(91,79,232,0);transform:scale(1)}
+  50%{box-shadow:0 0 24px 8px rgba(91,79,232,0.5);transform:scale(1.015)}
 }
-.copy-ai-btn:hover{opacity:0.9;transform:scale(1.01);animation:none;box-shadow:0 0 20px 4px rgba(91,79,232,0.3)}
+.copy-ai-btn:hover{opacity:0.9;transform:scale(1.02);animation:none;box-shadow:0 0 24px 8px rgba(91,79,232,0.4)}
 .copy-ai-btn:active{transform:scale(0.99)}
 .copy-ai-btn.copied{background:var(--green);opacity:1;animation:none;box-shadow:none}
 
