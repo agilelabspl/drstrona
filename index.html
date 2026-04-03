@@ -1147,75 +1147,75 @@ async function runAnalysis(url){
   const ch=R.challengeType&&R.challengeType!=='none'; // bot protection detected
   let seoScore=100, aiScore=100, privScore=100, indexScore=100, structScore=100;
 
-  // ── SEO (max kary: ~145, więc łatwo spaść nisko) ──
-  if(!R.title) seoScore-=25;
+  // ── SEO (krytyczne 12-15, ważne 6-8, drobne 3-4) ──
+  if(!R.title) seoScore-=15;
   else{
-    if(R.titleLength<20) seoScore-=10;
-    else if(R.titleLength>60) seoScore-=8;
+    if(R.titleLength<20) seoScore-=6;
+    else if(R.titleLength>60) seoScore-=4;
   }
-  if(!R.metaDesc) seoScore-=20;
+  if(!R.metaDesc) seoScore-=12;
   else{
-    if(R.descLength<70) seoScore-=8;
-    else if(R.descLength>160) seoScore-=5;
+    if(R.descLength<70) seoScore-=5;
+    else if(R.descLength>160) seoScore-=3;
   }
-  if(R.duplicateDesc) seoScore-=10;
-  if(!R.canonical) seoScore-=15;
-  if(!R.hasOG) seoScore-=(js?3:10);
-  if(!R.hasFavicon) seoScore-=5;
-  if(!R.hasViewport) seoScore-=10;
-  if(R.hasGenericLinks&&R.genericLinks>=3) seoScore-=5;
-  if(R.hasEmptyLinks&&R.emptyLinks>=3) seoScore-=5;
-  if(R.wordCount<100&&!js&&!ch) seoScore-=10;
-  if(!R.hasCTA&&!js&&!ch) seoScore-=5;
+  if(R.duplicateDesc) seoScore-=6;
+  if(!R.canonical) seoScore-=10;
+  if(!R.hasOG) seoScore-=(js?2:8);
+  if(!R.hasFavicon) seoScore-=3;
+  if(!R.hasViewport) seoScore-=8;
+  if(R.hasGenericLinks&&R.genericLinks>=3) seoScore-=4;
+  if(R.hasEmptyLinks&&R.emptyLinks>=3) seoScore-=4;
+  if(R.wordCount<100&&!js&&!ch) seoScore-=8;
+  if(!R.hasCTA&&!js&&!ch) seoScore-=4;
   if(!R.hasSocial) seoScore-=3;
 
-  // ── Indeksowanie (pliki serwerowe, JS nie wpływa) ──
-  if(R.hasNoindex) indexScore-=50;
-  if(R.sitemapStatus==='missing') indexScore-=25;
-  else if(R.sitemapStatus==='unknown') indexScore-=10;
-  if(R.robotsStatus==='missing') indexScore-=20;
-  else if(R.robotsStatus==='unknown') indexScore-=10;
-  if(R.hasRobots&&!R.robotsSitemap) indexScore-=10;
-  if(R.hasRedirects&&R.redirectCount>=3) indexScore-=10;
-  if(R.canonicalConflict) indexScore-=15;
-  if(R.hasMixedContent) indexScore-=10;
-  if(!R.isHttps) indexScore-=15;
+  // ── Indeksowanie ──
+  if(R.hasNoindex) indexScore-=15;
+  if(R.sitemapStatus==='missing') indexScore-=12;
+  else if(R.sitemapStatus==='unknown') indexScore-=5;
+  if(R.robotsStatus==='missing') indexScore-=12;
+  else if(R.robotsStatus==='unknown') indexScore-=5;
+  if(R.hasRobots&&!R.robotsSitemap) indexScore-=8;
+  if(R.hasRedirects&&R.redirectCount>=3) indexScore-=6;
+  if(R.canonicalConflict) indexScore-=10;
+  if(R.hasMixedContent) indexScore-=8;
+  if(!R.isHttps) indexScore-=12;
 
   // ── Struktura ──
-  if(!R.hasSchema) structScore-=(js?10:25);
-  else if(R.hasSchemaErrors) structScore-=10;
-  if(R.h1Count===0) structScore-=(js?5:20);
-  if(R.h1Count>1) structScore-=10;
-  if(R.brokenHeadingHierarchy) structScore-=(js?3:10);
-  if(R.h2Count===0&&!js&&!ch) structScore-=8;
-  if(R.imgsNoAlt>0) structScore-=(js?3:15);
-  if(!R.lang) structScore-=10;
-  if(R.semanticCount===0) structScore-=(js?3:12);
-  else if(R.semanticCount<=2&&!js) structScore-=5;
-  if(R.hasBlockingScripts) structScore-=5;
-  if(R.hasEmptyLinks&&R.emptyLinks>=2) structScore-=5;
+  if(!R.hasSchema) structScore-=(js?5:15);
+  else if(R.hasSchemaErrors) structScore-=6;
+  if(R.h1Count===0) structScore-=(js?4:12);
+  if(R.h1Count>1) structScore-=6;
+  if(R.brokenHeadingHierarchy) structScore-=(js?2:8);
+  if(R.h2Count===0&&!js&&!ch) structScore-=6;
+  if(R.imgsNoAlt>0) structScore-=(js?2:10);
+  if(!R.lang) structScore-=8;
+  if(R.semanticCount===0) structScore-=(js?2:10);
+  else if(R.semanticCount<=2&&!js) structScore-=4;
+  if(R.hasBlockingScripts) structScore-=4;
+  if(R.hasEmptyLinks&&R.emptyLinks>=2) structScore-=4;
 
   // ── AI Ready ──
-  if(R.llmsStatus==='missing') aiScore-=25;
-  else if(R.llmsStatus==='unknown') aiScore-=8;
-  if(R.gptBlocked) aiScore-=20;
-  if(R.claudeBlocked) aiScore-=10;
-  if(R.perplexityBlocked) aiScore-=10;
-  if(!R.hasSchema) aiScore-=(js?3:12);
-  if(R.robotsStatus==='missing') aiScore-=8;
+  if(R.llmsStatus==='missing') aiScore-=15;
+  else if(R.llmsStatus==='unknown') aiScore-=5;
+  if(R.gptBlocked) aiScore-=12;
+  if(R.claudeBlocked) aiScore-=8;
+  if(R.perplexityBlocked) aiScore-=8;
+  if(!R.hasSchema) aiScore-=(js?2:10);
+  if(R.robotsStatus==='missing') aiScore-=6;
   else if(R.robotsStatus==='unknown') aiScore-=3;
-  if(!R.hasAEOFormats) aiScore-=(js?3:8);
-  if(!R.hasAuthor&&!R.hasAuthorSchema) aiScore-=(js?3:8);
+  if(!R.hasAEOFormats) aiScore-=(js?2:6);
+  if(!R.hasAuthor&&!R.hasAuthorSchema) aiScore-=(js?2:6);
   if(!R.hasDateModified) aiScore-=5;
-  if(!R.hasAboutPage&&!js&&!ch) aiScore-=5;
+  if(!R.hasAboutPage&&!js&&!ch) aiScore-=4;
 
-  // ── RODO (cookie banner, privacy link: prawie zawsze JS-rendered) ──
+  // ── RODO ──
   const _hasTrackers=R.hasGA||R.hasFB||R.hasHotjar;
-  if(!R.hasPrivacy&&_hasTrackers) privScore-=(js?10:25);
-  if(!R.hasCookieBanner&&_hasTrackers) privScore-=(js?10:30);
-  if(R.hasForms&&!R.formHasConsent) privScore-=(js?5:10);
-  if(R.hasExternalGoogleFonts) privScore-=10;
-  if(!R.hasTerms&&_hasTrackers) privScore-=5;
+  if(!R.hasPrivacy&&_hasTrackers) privScore-=(js?6:15);
+  if(!R.hasCookieBanner&&_hasTrackers) privScore-=(js?6:15);
+  if(R.hasForms&&!R.formHasConsent) privScore-=(js?4:8);
+  if(R.hasExternalGoogleFonts) privScore-=8;
+  if(!R.hasTerms&&_hasTrackers) privScore-=4;
   R.seoScore=Math.max(0,seoScore);
   R.aiScore=Math.max(0,aiScore);
   R.privScore=Math.max(0,privScore);
