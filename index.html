@@ -729,6 +729,7 @@ async function runAnalysis(url){
   // Try our Worker first (with metadata), fallback to plain proxy
   let gotMeta=false;
   R.renderedVia='fetch';
+  R.challengeType='none';
   try{
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(),25000);
@@ -743,6 +744,7 @@ async function runAnalysis(url){
         R.xRobotsTag=res.headers.get('X-Robots-Tag')||'';
         R.hstsHeader=res.headers.get('X-Proxy-HSTS')||'';
         R.renderedVia=res.headers.get('X-Proxy-Rendered')||'fetch';
+        R.challengeType=res.headers.get('X-Proxy-Challenge')||'none';
         gotMeta=true;
       }
     }
@@ -1248,6 +1250,16 @@ function renderReport(d,url){
         <div class="js-alert-title">Wykryto stronę dynamiczną${d.jsFramework?' ('+esc(d.jsFramework)+')':''}</div>
         Twoja strona ładuje treść przez JavaScript. Nasz skaner analizuje kod HTML, który serwer zwraca przed uruchomieniem skryptów. Elementy takie jak menu, stopka, baner cookie czy przyciski CTA mogą być obecne na stronie, ale niewidoczne w tej analizie.
         <div class="js-alert-score">Punktacja została skorygowana. Wyniki <span class="tag tag-html">HTML</span> bazują na kodzie źródłowym, który nie zawiera treści generowanych przez JavaScript. Wyniki <span class="tag tag-live">live API</span> (szybkość, indeksowanie) są w pełni wiarygodne.</div>
+      </div>
+    </div>
+    `:''}
+
+    ${d.challengeType&&d.challengeType!=='none'?`
+    <div class="js-alert" style="background:#fff0f0;border-color:#e8c4c4">
+      <div class="js-alert-icon">🛡️</div>
+      <div class="js-alert-body">
+        <div class="js-alert-title" style="color:#c0392b">Strona chroniona przez ${esc(d.challengeType==='blocked-403'?'firewall (403)':d.challengeType)}</div>
+        Ta strona używa ochrony przed botami (np. Cloudflare, Sucuri), która blokuje automatyczne skanowanie. Wyniki analizy HTML mogą być niepełne lub niedokładne, bo skaner otrzymał stronę weryfikacji zamiast właściwej treści. Wyniki oparte na zewnętrznych API (szybkość, indeksowanie, SSL) pozostają wiarygodne.
       </div>
     </div>
     `:''}

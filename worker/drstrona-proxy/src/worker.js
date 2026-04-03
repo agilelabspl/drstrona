@@ -121,34 +121,43 @@ export default {
         const xRobots = resp.headers.get('X-Robots-Tag') || '';
         const hsts = resp.headers.get('Strict-Transport-Security') || '';
 
-        // Sprawdź czy HTML jest "pusty" (SPA/JS-heavy)
-        // Browser rendering only for legitimate requests (costly operation)
         let renderedVia = 'fetch';
-        if (isLegitRequest && isJSHeavy(body) && env.CF_ACCOUNT_ID && env.CF_BR_TOKEN) {
+        let challengeType = detectChallenge(body, resp.status);
+        const needsBrowser = isLegitRequest && env.CF_ACCOUNT_ID && env.CF_BR_TOKEN;
+
+        // Challenge detected lub SPA/JS-heavy → próbuj browser rendering
+        if (needsBrowser && (challengeType || isJSHeavy(body))) {
           try {
             const rendered = await renderWithBrowser(currentUrl, env);
-            if (rendered && rendered.length > body.length) {
-              body = rendered;
-              renderedVia = 'browser';
+            if (rendered) {
+              const stillBlocked = detectChallenge(rendered, 200);
+              if (!stillBlocked && rendered.length > 200) {
+                body = rendered;
+                renderedVia = 'browser';
+                challengeType = null; // browser rendering przeszedł challenge
+              }
             }
           } catch (e) {
             // fallback: zwróć oryginalny HTML
           }
         }
 
+        const responseHeaders = {
+          ...corsHeaders,
+          'Content-Type': resp.headers.get('Content-Type') || 'text/html',
+          'X-Proxy-Status': String(resp.status),
+          'X-Proxy-Chain': JSON.stringify(chain),
+          'X-Proxy-Final-Url': currentUrl,
+          'X-Robots-Tag': xRobots,
+          'X-Proxy-HSTS': hsts,
+          'X-Proxy-Rendered': renderedVia,
+          'X-Proxy-Challenge': challengeType || 'none',
+          'Access-Control-Expose-Headers': 'X-Proxy-Chain, X-Proxy-Final-Url, X-Robots-Tag, X-Proxy-Status, X-Proxy-HSTS, X-Proxy-Rendered, X-Proxy-Challenge',
+        };
+
         return new Response(body, {
           status: resp.status,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': resp.headers.get('Content-Type') || 'text/html',
-            'X-Proxy-Status': String(resp.status),
-            'X-Proxy-Chain': JSON.stringify(chain),
-            'X-Proxy-Final-Url': currentUrl,
-            'X-Robots-Tag': xRobots,
-            'X-Proxy-HSTS': hsts,
-            'X-Proxy-Rendered': renderedVia,
-            'Access-Control-Expose-Headers': 'X-Proxy-Chain, X-Proxy-Final-Url, X-Robots-Tag, X-Proxy-Status, X-Proxy-HSTS, X-Proxy-Rendered',
-          },
+          headers: responseHeaders,
         });
       }
 
@@ -165,6 +174,46 @@ export default {
     }
   },
 };
+
+// ── DETEKCJA BOT PROTECTION / CHALLENGE PAGE ──
+function detectChallenge(html, status) {
+  const signatures = [
+    // Cloudflare
+    { pattern: 'cf-browser-verification', type: 'cloudflare' },
+    { pattern: 'challenge-platform', type: 'cloudflare' },
+    { pattern: 'Just a moment...', type: 'cloudflare' },
+    { pattern: 'cf_chl_opt', type: 'cloudflare' },
+    { pattern: 'Checking your browser', type: 'cloudflare' },
+    { pattern: '_cf_chl_tk', type: 'cloudflare' },
+    // Sucuri
+    { pattern: 'sucuri.net/privacy', type: 'sucuri' },
+    { pattern: 'Access Denied - Sucuri', type: 'sucuri' },
+    // Akamai
+    { pattern: 'akamaized.net', type: 'akamai' },
+    { pattern: 'Reference&#32;&#35;', type: 'akamai' },
+    // Generic WAF / bot protection
+    { pattern: 'Attention Required! | Cloudflare', type: 'cloudflare' },
+    { pattern: 'Please Wait... | Cloudflare', type: 'cloudflare' },
+    { pattern: 'DDoS protection by', type: 'generic-waf' },
+    { pattern: 'Pardon Our Interruption', type: 'generic-waf' },
+    { pattern: 'Are you a human?', type: 'generic-waf' },
+    { pattern: 'captcha-delivery', type: 'generic-waf' },
+  ];
+
+  for (const sig of signatures) {
+    if (html.includes(sig.pattern)) {
+      return sig.type;
+    }
+  }
+
+  // Status 403 + bardzo mało treści = prawdopodobna blokada
+  if (status === 403) {
+    const textOnly = html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (textOnly.length < 500) return 'blocked-403';
+  }
+
+  return null;
+}
 
 // Heurystyka: czy HTML wygląda na SPA/JS-heavy (mało treści, dużo skryptów)
 function isJSHeavy(html) {
