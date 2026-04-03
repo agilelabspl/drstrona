@@ -1,17 +1,29 @@
-// ── RATE LIMITING (KV-based, per IP) ──
+// ── RATE LIMITING (Cache API, per IP) ──
 const RATE_LIMIT = 20;       // max requests
 const RATE_WINDOW = 60;      // per 60 seconds
 
-async function checkRateLimit(ip, kv) {
-  const key = `rl:${ip}`;
-  const data = await kv.get(key, 'json');
+async function checkRateLimit(ip) {
+  const cache = caches.default;
+  const cacheKey = new Request(`https://rate-limit.internal/${ip}`);
+  const cached = await cache.match(cacheKey);
   const now = Date.now();
+
+  let data = null;
+  if (cached) {
+    data = await cached.json();
+  }
+
   if (data && (now - data.start) < RATE_WINDOW * 1000) {
     if (data.count >= RATE_LIMIT) return false;
-    await kv.put(key, JSON.stringify({ start: data.start, count: data.count + 1 }), { expirationTtl: RATE_WINDOW });
-    return true;
+    data.count++;
+  } else {
+    data = { start: now, count: 1 };
   }
-  await kv.put(key, JSON.stringify({ start: now, count: 1 }), { expirationTtl: RATE_WINDOW });
+
+  const resp = new Response(JSON.stringify(data), {
+    headers: { 'Cache-Control': `s-maxage=${RATE_WINDOW}` },
+  });
+  await cache.put(cacheKey, resp);
   return true;
 }
 
@@ -68,7 +80,7 @@ export default {
 
     // ── RATE LIMIT CHECK ──
     const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
-    const allowed = await checkRateLimit(clientIP, env.USERS);
+    const allowed = await checkRateLimit(clientIP);
     if (!allowed) {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again in a minute.' }), {
         status: 429,
