@@ -1719,7 +1719,7 @@ function unlockContent(){
   if(form) form.style.display='none';
   if(success) success.style.display='block';
   const copyBtn = document.getElementById('copyAiBtn');
-  if(copyBtn) copyBtn.style.display='block';
+  if(copyBtn){ copyBtn.style.display='block'; copyBtn.style.animation='none'; requestAnimationFrame(()=>{ copyBtn.style.animation=''; }); }
 }
 
 function saveUserToKV(){
