@@ -883,7 +883,7 @@ async function runAnalysis(url){
   const h2s=[...doc.querySelectorAll('h2')];
   const h3s=[...doc.querySelectorAll('h3')];
   R.h1Count=h1s.length;
-  R.h1Text=h1s[0]?.textContent?.trim().substring(0,80)||null;
+  R.h1Text=h1s[0]?h1s[0].innerHTML.replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,80):null;
   R.h2Count=h2s.length;
   R.h3Count=h3s.length;
   const imgs=[...doc.querySelectorAll('img')];
@@ -903,8 +903,8 @@ async function runAnalysis(url){
   }).length;
   R.hasBlockingScripts=R.blockingScripts>0;
 
-  // Google Fonts from external server (GDPR issue)
-  R.hasExternalGoogleFonts=!!doc.querySelector('link[href*="fonts.googleapis.com"]')||html.includes('fonts.googleapis.com');
+  // Google Fonts from external server (GDPR issue) — DOM-only to avoid self-matching
+  R.hasExternalGoogleFonts=!!doc.querySelector('link[href*="fonts.googleapis.com"]')||[...doc.querySelectorAll('style')].some(s=>s.textContent.includes('fonts.googleapis.com'));
 
   // mixed content (http resources on https page)
   R.mixedContent=0;
@@ -926,17 +926,19 @@ async function runAnalysis(url){
   const bodyText=doc.body?.textContent||'';
   R.wordCount=bodyText.split(/\s+/).filter(w=>w.length>1).length;
   R.htmlLength=html.length;
-  // CTA detection — only count meaningful action buttons
+  // CTA detection — buttons/submit are CTAs by default (negative filter), links need keyword match
+  const ctaExclude=['cookie','consent','close','menu','nav','toggle','accordion','carousel','slider','dismiss','modal','popup','back','prev','next','lang','search'];
   const ctaKeywords=['kontakt','zamów','kup','zapisz','wyślij','umów','sprawdź','pobierz','ofert','cennik','demo','trial','start','zacznij','dołącz','zadzwoń','napisz','skontaktuj','dowiedz','więcej','zobacz','przetestuj','testuj','wypróbuj','bezpłatnie','gratis','rezerwuj','subskrybuj'];
-  const allBtns=[...doc.querySelectorAll('button,a[class*="btn"],a[class*="cta"],input[type="submit"]')];
-  const realCTAs=allBtns.filter(el=>{
+  const isCtaExcluded=el=>{const cls=(el.className||'').toLowerCase();const txt=(el.textContent||'').toLowerCase().trim();return txt.length<2||ctaExclude.some(k=>cls.includes(k));};
+  const ctaButtons=[...doc.querySelectorAll('button,input[type="submit"]')].filter(el=>!isCtaExcluded(el));
+  const ctaLinks=[...doc.querySelectorAll('a[class*="btn"],a[class*="cta"]')].filter(el=>{
+    if(isCtaExcluded(el)) return false;
     const txt=(el.textContent||'').toLowerCase().trim();
     const cls=(el.className||'').toLowerCase();
-    // skip cookie/nav/utility buttons
-    if(cls.includes('cookie')||cls.includes('consent')||cls.includes('close')||cls.includes('menu')||cls.includes('nav')) return false;
-    if(txt.length<2||txt.length>60) return false;
+    if(txt.length>60) return false;
     return ctaKeywords.some(k=>txt.includes(k))||cls.includes('cta')||cls.includes('primary');
   });
+  const realCTAs=[...ctaButtons,...ctaLinks];
   R.ctaCount=realCTAs.length;
   R.hasCTA=R.ctaCount>0;
   // contact info
@@ -972,9 +974,10 @@ async function runAnalysis(url){
   // language
   R.lang=doc.documentElement?.getAttribute('lang')||null;
   R.hasCookieBanner=!!doc.querySelector('[class*="cookie"],[id*="cookie"],[class*="consent"],[id*="consent"],[class*="gdpr"],[id*="gdpr"],[class*="rodo"],[id*="rodo"],[class*="cc-"],[id*="cc-"],[class*="cmp-"],[id*="cmp-"],[data-nosnippet="true"][class*="banner"],[class*="przechowyw"],[aria-label*="cookie" i],[aria-label*="consent" i],[aria-label*="prywatno" i]')||html.includes('CookieConsent')||html.includes('cookieconsent')||html.includes('cookie-banner')||html.includes('cookie_banner')||html.includes('cookie-consent')||html.includes('ciasteczk')||html.includes('cookiebot.com')||html.includes('cookieyes.com')||html.includes('osano.com')||html.includes('onetrust.com')||html.includes('iubenda.com')||html.includes('termsfeed.com')||html.includes('axeptio')||html.includes('trustarc.com')||html.includes('usercentrics')||html.includes('didomi')||html.includes('quantcast')||html.includes('privacymanager')||html.includes('cc_div')||html.includes('cc-window')||html.includes('cc-banner')||html.includes('cmp-container')||html.includes('klaro')||html.includes('tarteaucitron')||html.includes('moove_gdpr')||html.includes('cookie-law-info')||html.includes('cli-modal')||html.includes('cmplz')||html.includes('complianz')||!!doc.querySelector('script[src*="cookie"],script[src*="consent"],script[src*="gdpr"],script[src*="cmp"],script[src*="klaro"],script[src*="tarteaucitron"],script[src*="complianz"],script[src*="cmplz"]');
-  R.hasGA=html.includes('google-analytics.com')||html.includes('gtag(');
-  R.hasFB=html.includes('facebook.com/tr')||html.includes('fbq(');
-  R.hasHotjar=html.includes('hotjar.com');
+  // Tracker detection — DOM-first + specific regex to avoid self-matching
+  R.hasGA=!!doc.querySelector('script[src*="googletagmanager.com/gtag/js"],script[src*="google-analytics.com/analytics"]')||/gtag\s*\(\s*['"](?:config|event|set|consent)['"]/.test(html);
+  R.hasFB=!!doc.querySelector('script[src*="connect.facebook.net"]')||/fbq\s*\(\s*['"]init['"]/.test(html)||!!doc.querySelector('img[src*="facebook.com/tr"]');
+  R.hasHotjar=!!doc.querySelector('script[src*="static.hotjar.com"]')||/\(h,o,t,j,a,r\){/.test(html);
 
   // E-E-A-T signals
   const authorPatterns=[...doc.querySelectorAll('[class*="author"],[rel="author"],[itemprop="author"],a[href*="linkedin.com/in/"]')];
