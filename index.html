@@ -13,6 +13,39 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.drstrona.pl/">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Dr Strona",
+      "url": "https://drstrona.pl",
+      "description": "Darmowy audyt SEO, szybkości, RODO i widoczności w AI. Sprawdź zdrowie swojej strony w 59 sekund.",
+      "applicationCategory": "WebApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "pl",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "PLN"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Paweł Lewiński",
+        "url": "https://www.linkedin.com/in/pawellewinski/"
+      },
+      "dateModified": "2026-04-03"
+    },
+    {
+      "@type": "Organization",
+      "name": "AgileLabs",
+      "url": "https://agilelabs.pl",
+      "sameAs": ["https://www.linkedin.com/in/pawellewinski/"]
+    }
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
 <link rel="stylesheet" href="https://fonts.bunny.net/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap">
 <!-- Google Sign-In -->
@@ -445,10 +478,10 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
   <p class="hero-sub">Zbadaj 6 obszarów (+1 bonus) swojej strony w 59 sekund.<br>Dowiedz się co blokuje Twój ruch, widoczność i konwersje.</p>
 
   <div class="ekg-wrap">
-    <div class="ekg-label">
+    <h2 class="ekg-label" style="font-size:inherit;font-weight:inherit;margin:0">
       <span>Wskaźniki zdrowia strony</span>
       <span class="ekg-live"><span class="ekg-live-dot"></span>live demo</span>
-    </div>
+    </h2>
     <canvas id="ekgCanvas" width="576" height="72"></canvas>
     <div class="ekg-metrics">
       <div class="ekg-metric">
@@ -493,6 +526,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
   </div>
 
   <div class="steps-banner">
+    <h2 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0">Jak zbadać swoją stronę</h2>
     <div class="step-item">
       <div class="step-num">1</div>
       <div class="step-text">Wklej adres strony</div>
@@ -532,7 +566,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
     <a href="#" id="footer-cookie-settings">Ustawienia Cookies</a>
     <a href="https://agilelabs.pl/politykazakopow" target="_blank" rel="noopener">Regulamin</a>
   </div>
-  <div class="footer-copy">Dr Strona MVP · analiza techniczna, nie porada prawna · 2026</div>
+  <div class="footer-copy">Dr Strona MVP · analiza techniczna, nie porada prawna · <time datetime="2026-04-03">kwiecień 2026</time></div>
 </div>
 </footer>
 
