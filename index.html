@@ -962,7 +962,7 @@ async function runAnalysis(url){
   R.htmlLength=html.length;
   // CTA detection — buttons/submit are CTAs by default (negative filter), links need keyword match
   const ctaExclude=['cookie','consent','close','menu','nav','toggle','accordion','carousel','slider','dismiss','modal','popup','back','prev','next','lang','search'];
-  const ctaKeywords=['kontakt','zamów','kup','zapisz','wyślij','umów','sprawdź','pobierz','ofert','cennik','demo','trial','start','zacznij','dołącz','zadzwoń','napisz','skontaktuj','dowiedz','więcej','zobacz','przetestuj','testuj','wypróbuj','bezpłatnie','gratis','rezerwuj','subskrybuj'];
+  const ctaKeywords=['kontakt','zamów','kup','zapisz','wyślij','umów','sprawdź','pobierz','ofert','cennik','demo','trial','start','zacznij','dołącz','zadzwoń','napisz','skontaktuj','dowiedz','więcej','zobacz','przetestuj','testuj','wypróbuj','bezpłatnie','gratis','rezerwuj','subskrybuj','contact','talk','book','schedule','sign up','signup','subscribe','hire','meet','buy','shop','download','try','join','read more','learn more','get started','get in touch','free','watch','order','request','apply','discover','explore'];
   const isCtaExcluded=el=>{const cls=(el.className||'').toLowerCase();const txt=(el.textContent||'').toLowerCase().trim();return txt.length<2||ctaExclude.some(k=>cls.includes(k));};
   const ctaButtons=[...doc.querySelectorAll('button,input[type="submit"]')].filter(el=>!isCtaExcluded(el));
   const ctaLinks=[...doc.querySelectorAll('a[class*="btn"],a[class*="cta"]')].filter(el=>{
@@ -1155,7 +1155,7 @@ async function runAnalysis(url){
   try{
     const lc = await fetchViaProxy(origin+'/llms.txt', 5);
     if(lc===null) R.llmsStatus='unknown';
-    else if(lc&&lc.length>10&&!lc.toLowerCase().includes('not found')&&!lc.includes('<!doctype')&&!lc.includes('<html')) R.llmsStatus='found';
+    else if(lc&&lc.length>5&&!lc.toLowerCase().includes('<!doctype')&&!lc.toLowerCase().includes('<html')) R.llmsStatus='found';
     else R.llmsStatus='missing';
   }catch{R.llmsStatus='unknown';}
   R.hasLlms=R.llmsStatus==='found';
@@ -1519,15 +1519,15 @@ function buildIndex(d){
 
 function buildStructure(d){
   const f=[];
-  if(!d.hasSchema) f.push({s:'amber',t:'Google nie rozumie czym się zajmujesz',src:'html',w:'Brak danych strukturalnych. Google i asystenci AI nie wiedzą czym jest Twoja firma, co oferujesz i gdzie jesteś. Tracisz "rich results" (gwiazdki, FAQ, logo) w wynikach wyszukiwania.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony.'});
+  if(!d.hasSchema) f.push({s:'amber',t:'Brak danych strukturalnych (Schema.org)',src:'html',w:'Nie znaleźliśmy Schema.org w kodzie strony. Dane strukturalne pomagają Google wyświetlać „rich results” (logo, FAQ, oceny) i ułatwiają asystentom AI zrozumienie Twojej oferty. Brak Schema nie wyklucza Cię z wyszukiwarki, ale ogranicza dodatkowe sygnały.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony.'});
   else if(d.hasSchemaErrors) f.push({s:'amber',t:'Dane strukturalne mają braki',src:'html',w:'Schema.org jest na stronie, ale brakuje wymaganych pól: '+esc(d.schemaErrors.join(', '))+'. Niekompletne dane mogą być ignorowane przez Google.',fix:'Uzupełnij brakujące pola w danych strukturalnych. Sprawdź poprawność: search.google.com/test/rich-results'});
-  else f.push({s:'green',t:'Google rozumie czym się zajmujesz',src:'html',w:'Dane strukturalne są na miejscu. Wyszukiwarki i AI wiedzą czym jest Twoja firma.',fix:null});
+  else f.push({s:'green',t:'Dane strukturalne na miejscu (Schema.org)',src:'html',w:'Schema.org znalezione. Wyszukiwarki i AI mają dodatkowe sygnały o Twojej firmie.',fix:null});
   if(d.h1Count===0) f.push({s:'red',t:'Strona nie ma głównego nagłówka',src:'html',w:'Główny nagłówek (H1) mówi Google i użytkownikom o czym jest ta strona. Jego brak osłabia widoczność w wyszukiwarce.',fix:'Dodaj jeden główny nagłówek z frazą opisującą Twoją działalność.'});
   else if(d.h1Count>1) f.push({s:'amber',t:`Za dużo głównych nagłówków (${d.h1Count})`,src:'html',w:'Na stronie powinien być dokładnie jeden główny nagłówek. Wiele nagłówków H1 dezorientuje wyszukiwarki.',fix:'Zostaw jeden główny nagłówek, pozostałe zamień na podtytuły.'});
   else f.push({s:'green',t:`Główny nagłówek poprawny: "${esc((d.h1Text||'').substring(0,50))}"`,src:'html',w:'Strona ma jeden, jasny nagłówek główny.',fix:null});
   if(d.brokenHeadingHierarchy) f.push({s:'amber',t:'Przeskoczona hierarchia nagłówków (H1→H3 bez H2)',src:'html',w:'Strona ma nagłówek H1 i H3, ale nie ma H2. To jak książka z rozdziałami i podpodrozdziałami, ale bez podrozdziałów. Utrudnia nawigację i osłabia strukturę SEO.',fix:'Dodaj nagłówki H2 między H1 a H3. Hierarchia powinna być: H1 → H2 → H3.'});
   if(d.imgsNoAlt>0) f.push({s:'amber',t:`${d.imgsNoAlt} z ${d.totalImages} obrazków bez opisu`,src:'html',w:'Obrazki bez opisu są niewidoczne dla Google Images i czytników ekranu (używanych przez osoby niewidome). Tracisz dodatkowe źródło ruchu z wyszukiwarki grafik.',fix:'Dodaj opis (alt) do każdego obrazka w ustawieniach CMS.'});
-  if(d.textToHtmlRatio<10) f.push({s:'amber',t:`Mało treści w kodzie strony (${d.textToHtmlRatio}%)`,src:'html',w:'Stosunek tekstu do kodu HTML jest niski (poniżej 10%). Oznacza to że strona ma dużo kodu a mało treści. Google i AI preferują strony bogate w treść. Niska gęstość tekstu może osłabić widoczność w wynikach wyszukiwania.',fix:'Dodaj więcej treści tekstowej (opisy, artykuły, FAQ). Rozważ usunięcie nadmiarowego kodu lub inline CSS/JS.'});
+  if(d.textToHtmlRatio<10&&d.wordCount<300) f.push({s:'amber',t:`Mało treści w kodzie strony (${d.textToHtmlRatio}%)`,src:'html',w:'Stosunek tekstu do kodu HTML jest niski (poniżej 10%) przy małej ilości słów. Oznacza to że strona ma dużo kodu a mało treści. Google i AI preferują strony bogate w treść.',fix:'Dodaj więcej treści tekstowej (opisy, artykuły, FAQ). Rozważ usunięcie nadmiarowego kodu lub inline CSS/JS.'});
   if(d.hasEmptyLinks) f.push({s:'amber',t:`${d.emptyLinks} pustych linków (bez tekstu)`,src:'html',w:'Na stronie są linki bez widocznego tekstu, opisu (aria-label) ani obrazka z opisem. Google nie wie gdzie prowadzą, użytkownicy nie wiedzą co kliknąć, a czytniki ekranu pomijają je.',fix:'Dodaj tekst do każdego linka lub atrybut aria-label opisujący dokąd prowadzi.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
@@ -1537,8 +1537,8 @@ function buildStructure(d){
     chk(d.h3Count>0, 'Podpodtytuły (H3)', d.h3Count+' znalezionych'),
     chk(!d.brokenHeadingHierarchy, 'Poprawna hierarchia nagłówków', d.brokenHeadingHierarchy?'H1→H3 bez H2':null),
     chk(d.totalImages>0?d.imgsNoAlt===0:true, 'Wszystkie obrazki mają opis (alt)', d.totalImages>0?d.imgsNoAlt+' bez opisu z '+d.totalImages:'brak obrazków'),
-    chk(d.totalImages>0, 'Obrazki na stronie', d.totalImages+' znalezionych'),
-    chk(d.textToHtmlRatio>=10, 'Gęstość treści (text-to-HTML ratio)', d.textToHtmlRatio+'% '+(d.textToHtmlRatio>=25?'(dobra)':d.textToHtmlRatio>=10?'(OK)':'(niska)')),
+    chk(null, 'Liczba obrazków na stronie', d.totalImages+' znalezionych'),
+    chk(d.textToHtmlRatio>=10||d.wordCount>=300, 'Gęstość treści (text-to-HTML ratio)', d.textToHtmlRatio+'% '+(d.textToHtmlRatio>=25?'(dobra)':d.textToHtmlRatio>=10?'(OK)':d.wordCount>=300?'(niska, ale treści dużo)':'(niska)')),
     chk(!d.hasEmptyLinks, 'Brak pustych linków', d.hasEmptyLinks?d.emptyLinks+' bez tekstu':null),
   ]);
   return sec('Struktura techniczna','Nagłówki, dane o firmie, obrazki',worst,f,cl,d.structScore);
@@ -1552,7 +1552,7 @@ function buildSpeed(d){
   } else if(d.mobileScore<50){
     f.push({s:'red',t:`📱 Telefon: ${d.mobileScore}/100`,src:'live',w:`Wynik poniżej 50 to poważny problem. Badania Google pokazują że 53% użytkowników zamyka stronę jeśli ładuje się dłużej niż 3 sekundy. Tracisz klientów zanim zobaczą ofertę.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:'Zoptymalizuj największy element na stronie (zazwyczaj obrazek hero): użyj formatu WebP, dodaj width/height, kompresuj. Rozważ lazy loading dla obrazków poniżej pierwszego ekranu.'});
   } else if(d.mobileScore<80){
-    f.push({s:'amber',t:`📱 Telefon: ${d.mobileScore}/100`,src:'live',w:`Strona działa, ale wolniej niż powinna na telefonach. Część użytkowników mobilnych może ją opuszczać.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:'Sprawdź rozmiar obrazków (max 200 KB na obrazek), włącz kompresję GZIP/Brotli na serwerze, rozważ CDN. Usuń nieużywane skrypty JS i CSS.'});
+    f.push({s:'amber',t:`📱 Telefon: ${d.mobileScore}/100`,src:'live',w:`Strona działa, ale wolniej niż powinna na telefonach. Część użytkowników mobilnych może ją opuszczać.${d.lcp?' LCP: '+d.lcp+'.':''} Wynik PageSpeed może wahać się ±5-10 pkt między pomiarami (to norma Google).`,fix:'Sprawdź rozmiar obrazków (max 200 KB na obrazek), włącz kompresję GZIP/Brotli na serwerze, rozważ CDN. Usuń nieużywane skrypty JS i CSS.'});
   } else {
     f.push({s:'green',t:`📱 Telefon: ${d.mobileScore}/100`,src:'live',w:`Strona ładuje się szybko na telefonach.${d.lcp?' LCP: '+d.lcp+'.':''}`,fix:null});
   }
@@ -1562,7 +1562,7 @@ function buildSpeed(d){
   } else if(d.desktopScore<50){
     f.push({s:'red',t:`🖥️ Komputer: ${d.desktopScore}/100`,src:'live',w:`Strona ładuje się za wolno nawet na komputerze.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:'Zoptymalizuj obrazki, włącz kompresję serwera (GZIP/Brotli), przenieś ciężkie skrypty na koniec strony z atrybutem defer.'});
   } else if(d.desktopScore<80){
-    f.push({s:'amber',t:`🖥️ Komputer: ${d.desktopScore}/100`,src:'live',w:`Strona mogłaby ładować się szybciej na komputerach.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:'Sprawdź rozmiar zasobów, włącz cache przeglądarki, rozważ CDN.'});
+    f.push({s:'amber',t:`🖥️ Komputer: ${d.desktopScore}/100`,src:'live',w:`Strona mogłaby ładować się szybciej na komputerach.${d.dLcp?' LCP: '+d.dLcp+'.':''} Wynik PageSpeed może wahać się ±5-10 pkt między pomiarami (to norma Google).`,fix:'Sprawdź rozmiar zasobów, włącz cache przeglądarki, rozważ CDN.'});
   } else {
     f.push({s:'green',t:`🖥️ Komputer: ${d.desktopScore}/100`,src:'live',w:`Strona ładuje się szybko na komputerach.${d.dLcp?' LCP: '+d.dLcp+'.':''}`,fix:null});
   }
