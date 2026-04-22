@@ -2,3 +2,4 @@ NOTATKI.md
 users/
 .wrangler/
 .DS_Store
+_local/

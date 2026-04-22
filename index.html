@@ -788,6 +788,11 @@ async function runAnalysis(url){
         R.finalUrl=res.headers.get('X-Proxy-Final-Url')||url;
         R.xRobotsTag=res.headers.get('X-Robots-Tag')||'';
         R.hstsHeader=res.headers.get('X-Proxy-HSTS')||'';
+        R.cspHeader=res.headers.get('X-Proxy-CSP')||'';
+        R.xfoHeader=res.headers.get('X-Proxy-XFO')||'';
+        R.xctoHeader=res.headers.get('X-Proxy-XCTO')||'';
+        R.refpolHeader=res.headers.get('X-Proxy-Refpol')||'';
+        R.permpolHeader=res.headers.get('X-Proxy-Permpol')||'';
         R.renderedVia=res.headers.get('X-Proxy-Rendered')||'fetch';
         R.challengeType=res.headers.get('X-Proxy-Challenge')||'none';
         gotMeta=true;
@@ -871,8 +876,14 @@ async function runAnalysis(url){
   R.hasRedirects=R.redirectChain.length>1;
   R.redirectCount=R.redirectChain.length-1;
 
-  // HSTS
+  // Security headers
   R.hasHSTS=!!R.hstsHeader;
+  R.hasCSP=!!(R.cspHeader&&R.cspHeader.trim().length>0);
+  R.hasXFO=!!(R.xfoHeader&&R.xfoHeader.trim().length>0);
+  R.hasXCTO=!!(R.xctoHeader&&R.xctoHeader.toLowerCase().includes('nosniff'));
+  R.hasRefpol=!!(R.refpolHeader&&R.refpolHeader.trim().length>0);
+  R.hasPermpol=!!(R.permpolHeader&&R.permpolHeader.trim().length>0);
+  R.securityHeadersCount=(R.hasHSTS?1:0)+(R.hasCSP?1:0)+(R.hasXFO?1:0)+(R.hasXCTO?1:0)+(R.hasRefpol?1:0)+(R.hasPermpol?1:0);
 
   // structured data validation
   R.schemaErrors=[];
@@ -1016,7 +1027,72 @@ async function runAnalysis(url){
   // E-E-A-T signals
   const authorPatterns=[...doc.querySelectorAll('[class*="author"],[rel="author"],[itemprop="author"],a[href*="linkedin.com/in/"]')];
   R.hasAuthor=authorPatterns.length>0;
-  R.hasAuthorSchema=R.schemas.some(s=>s['@type']==='Person'||(Array.isArray(s['@graph'])&&s['@graph'].some(g=>g['@type']==='Person')));
+
+  // Rekursywny skaner schema.org — znajduje typy wszędzie (top-level, @graph, zagnieżdżone w author/publisher/creator/mainEntity itd.)
+  // Używany do: hasAuthorSchema, hasOrgSchema, sameAs dla E-E-A-T.
+  const _findSchemasByType=(type)=>{
+    const found=[];
+    const seen=new WeakSet();
+    const visit=(obj)=>{
+      if(!obj||typeof obj!=='object') return;
+      if(seen.has(obj)) return;
+      seen.add(obj);
+      if(Array.isArray(obj)){ obj.forEach(visit); return; }
+      if(obj['@type']===type) found.push(obj);
+      for(const v of Object.values(obj)){
+        if(v&&typeof v==='object') visit(v);
+      }
+    };
+    R.schemas.forEach(visit);
+    return found;
+  };
+  const _countSameAs=(obj)=>{
+    const sa=obj.sameAs;
+    if(!sa) return 0;
+    if(Array.isArray(sa)) return sa.filter(x=>typeof x==='string'&&x.trim()).length;
+    if(typeof sa==='string'&&sa.trim()) return 1;
+    return 0;
+  };
+  const _persons=_findSchemasByType('Person');
+  const _orgs=[..._findSchemasByType('Organization'),..._findSchemasByType('LocalBusiness')];
+  R.hasAuthorSchema=_persons.length>0;
+  R.hasOrgSchema=_orgs.length>0;
+  R.personSameAs=_persons.length?Math.max(..._persons.map(_countSameAs)):0;
+  R.orgSameAs=_orgs.length?Math.max(..._orgs.map(_countSameAs)):0;
+  R.hasPersonSameAs=R.personSameAs>=1;
+  R.hasOrgSameAs=R.orgSameAs>=2; // min 2 = poważny sygnał (LinkedIn+GitHub / FB+IG itp.)
+
+  // Article / NewsArticle / BlogPosting — Google wymaga: headline, author, datePublished, image
+  const _articles=[..._findSchemasByType('Article'),..._findSchemasByType('NewsArticle'),..._findSchemasByType('BlogPosting')];
+  R.hasArticleSchema=_articles.length>0;
+  R.articleErrors=[];
+  _articles.forEach(a=>{
+    const t=a['@type']||'Article';
+    if(!a.headline) R.articleErrors.push(t+': brak "headline"');
+    if(!a.author) R.articleErrors.push(t+': brak "author"');
+    if(!a.datePublished) R.articleErrors.push(t+': brak "datePublished"');
+    if(!a.image) R.articleErrors.push(t+': brak "image"');
+  });
+  R.articleValid=_articles.length>0&&R.articleErrors.length===0;
+
+  // BreadcrumbList — pomaga LLM/Google zrozumieć hierarchię strony (Google docs: min 2 ListItem z position + name)
+  const _breadcrumbs=_findSchemasByType('BreadcrumbList');
+  R.hasBreadcrumb=_breadcrumbs.length>0;
+  R.breadcrumbCount=0;
+  R.breadcrumbValid=false;
+  if(_breadcrumbs.length){
+    const items=_breadcrumbs.flatMap(b=>Array.isArray(b.itemListElement)?b.itemListElement:[]);
+    R.breadcrumbCount=items.length;
+    // Spec Google: każdy ListItem musi mieć position (liczba lub string numeryczny) oraz name.
+    // Google dopuszcza dwa warianty: name na poziomie ListItem ALBO zagnieżdżony w item (obiekt z @id+name).
+    const _bcName=it=>(typeof it.name==='string'&&it.name.trim().length>0)||
+      (it.item&&typeof it.item==='object'&&typeof it.item.name==='string'&&it.item.name.trim().length>0);
+    R.breadcrumbValid=items.length>=2&&items.every(it=>
+      it&&typeof it==='object'&&
+      (typeof it.position==='number'||/^\d+$/.test(it.position||''))&&
+      _bcName(it)
+    );
+  }
   R.hasAboutPage=links.some(t=>t.includes('o nas')||t.includes('about')||t.includes('o firmie')||t.includes('zespo')||t.includes('team'));
   R.hasTrustBadges=(R.hasAddress?1:0)+(R.hasPhone?1:0)+(R.hasEmail?1:0)+(R.hasPrivacy?1:0)+(R.hasTerms?1:0)+(R.hasSocial?1:0);
 
@@ -1068,6 +1144,34 @@ async function runAnalysis(url){
   const textLen=(doc.body?.textContent||'').replace(/\s+/g,' ').trim().length;
   R.textToHtmlRatio=R.htmlLength>0?Math.round((textLen/R.htmlLength)*100):0;
 
+  // AEO content signals — industry best practice dla cytowalności w AI Overviews / ChatGPT browsing
+  // (nie są oficjalnym wymogiem Google, obserwowane w badaniach SEJ/Semrush/Ahrefs 2024-2025)
+  const _aeoWords=bodyText.split(/\s+/).filter(w=>w.length>1);
+
+  // 1. Answer-first: czy pierwsze 150 słów body zawierają kluczowe słowa z H1
+  //    (proxy na "odpowiedź na intencję pojawia się szybko")
+  R.answerFirst=null; R.answerFirstMatched=0; R.answerFirstTotal=0;
+  if(R.h1Text&&_aeoWords.length>=30){
+    const _stopWords=new Set(['i','a','w','o','z','na','do','że','to','się','jest','są','nie','oraz','lub','już','ale','jak','po','co','dla','od','za','bez','przy','przez','tak','też','tylko','albo','czy','tym','tego','tej','tych','ta','ten','mówi','the','an','is','are','of','in','for','on','with','and','or','but','not','by','at','as','it','be','this','that']);
+    const _h1Tokens=R.h1Text.toLowerCase().split(/\W+/).filter(w=>w.length>=3&&!_stopWords.has(w));
+    const _first150=_aeoWords.slice(0,150).join(' ').toLowerCase();
+    R.answerFirstTotal=_h1Tokens.length;
+    R.answerFirstMatched=_h1Tokens.filter(t=>_first150.includes(t)).length;
+    R.answerFirst=_h1Tokens.length>0&&R.answerFirstMatched>=Math.ceil(_h1Tokens.length*0.5);
+  }
+
+  // 2. Pytania w H2/H3 — AI preferuje format Q&A do cytowania
+  R.h2Questions=[...h2s].filter(h=>(h.textContent||'').includes('?')).length;
+  R.h3Questions=[...h3s].filter(h=>(h.textContent||'').includes('?')).length;
+  R.totalQuestionHeadings=R.h2Questions+R.h3Questions;
+
+  // 3. Cytowalne akapity — <p> o długości 100-170 słów zawierające liczby (self-contained, z danymi)
+  R.quotableCount=[...doc.querySelectorAll('p')].filter(p=>{
+    const txt=(p.textContent||'').trim();
+    const wc=txt.split(/\s+/).filter(w=>w.length>1).length;
+    return wc>=100&&wc<=170&&/\d/.test(txt);
+  }).length;
+
   showStep(3); await delay(200);
   // Fetch robots.txt first — needed for sitemap URL and llms.txt detection
   let robotsContent='';
@@ -1080,26 +1184,33 @@ async function runAnalysis(url){
     const rtl=rt.toLowerCase();
     // parse robots.txt properly per user-agent blocks
     function isBlockedInRobots(txt, botName){
+      // Obsługuje standardowy format Google oraz wzorzec ai-robots-txt,
+      // gdzie wiele "User-agent:" pod rząd dzieli ten sam blok reguł.
       const lines=txt.split('\n');
       const bot=botName.toLowerCase();
       let specificBlock=null, wildcardBlock=null;
-      let currentAgent=null;
-      for(const line of lines){
-        const l=line.trim().toLowerCase();
+      let currentAgents=[];
+      let sawRule=false;
+      for(const rawLine of lines){
+        const l=rawLine.trim().toLowerCase();
+        if(!l||l.startsWith('#')) continue;
         if(l.startsWith('user-agent:')){
-          currentAgent=l.replace('user-agent:','').trim();
-        } else if(currentAgent){
+          if(sawRule){ currentAgents=[]; sawRule=false; } // po regule — nowa grupa
+          currentAgents.push(l.replace('user-agent:','').trim());
+        } else if(currentAgents.length){
           if(l.startsWith('disallow:')){
+            sawRule=true;
             const path=l.replace('disallow:','').trim();
             if(path==='/'||path==='/*'){
-              if(currentAgent===bot) specificBlock='blocked';
-              else if(currentAgent==='*'&&specificBlock===null) wildcardBlock='blocked';
+              if(currentAgents.includes(bot)) specificBlock='blocked';
+              else if(currentAgents.includes('*')&&specificBlock===null) wildcardBlock='blocked';
             }
           } else if(l.startsWith('allow:')){
+            sawRule=true;
             const path=l.replace('allow:','').trim();
             if(path==='/'||path==='/*'){
-              if(currentAgent===bot) specificBlock='allowed';
-              else if(currentAgent==='*'&&specificBlock===null) wildcardBlock='allowed';
+              if(currentAgents.includes(bot)&&specificBlock===null) specificBlock='allowed';
+              else if(currentAgents.includes('*')&&specificBlock===null) wildcardBlock='allowed';
             }
           }
         }
@@ -1109,12 +1220,31 @@ async function runAnalysis(url){
       if(wildcardBlock!==null) return wildcardBlock==='blocked';
       return false;
     }
-    R.gptBlocked=isBlockedInRobots(rt,'gptbot');
-    R.claudeBlocked=isBlockedInRobots(rt,'claudebot');
-    R.perplexityBlocked=isBlockedInRobots(rt,'perplexitybot');
+    // AI crawlery — kategoryzacja:
+    // cat:'live'     = boty pobierające treść na żądanie gdy user pyta AI (decydują o obecności w odpowiedziach)
+    // cat:'training' = boty zbierające dane do trenowania modeli (blokada = etyczny wybór, nie wpływa na widoczność w odpowiedziach)
+    R.aiBots={
+      'GPTBot':             {cat:'training',vendor:'OpenAI',      desc:'OpenAI — trenowanie modeli',             blocked:isBlockedInRobots(rt,'gptbot')},
+      'ChatGPT-User':       {cat:'live',    vendor:'OpenAI',      desc:'ChatGPT — przeglądanie na żądanie',      blocked:isBlockedInRobots(rt,'chatgpt-user')},
+      'OAI-SearchBot':      {cat:'live',    vendor:'OpenAI',      desc:'SearchGPT — wyszukiwanie',               blocked:isBlockedInRobots(rt,'oai-searchbot')},
+      'ClaudeBot':          {cat:'training',vendor:'Anthropic',   desc:'Anthropic — trenowanie modeli',          blocked:isBlockedInRobots(rt,'claudebot')},
+      'Claude-User':        {cat:'live',    vendor:'Anthropic',   desc:'Claude — przeglądanie na żądanie',       blocked:isBlockedInRobots(rt,'claude-user')},
+      'Claude-SearchBot':   {cat:'live',    vendor:'Anthropic',   desc:'Claude — wyszukiwanie',                  blocked:isBlockedInRobots(rt,'claude-searchbot')},
+      'PerplexityBot':      {cat:'live',    vendor:'Perplexity',  desc:'Perplexity — indeksowanie',              blocked:isBlockedInRobots(rt,'perplexitybot')},
+      'Google-Extended':    {cat:'training',vendor:'Google',      desc:'Gemini — trenowanie modeli',             blocked:isBlockedInRobots(rt,'google-extended')},
+      'Applebot-Extended':  {cat:'training',vendor:'Apple',       desc:'Apple Intelligence — trenowanie',        blocked:isBlockedInRobots(rt,'applebot-extended')},
+      'Meta-ExternalAgent': {cat:'training',vendor:'Meta',        desc:'Llama — trenowanie modeli',              blocked:isBlockedInRobots(rt,'meta-externalagent')},
+      'CCBot':              {cat:'training',vendor:'Common Crawl',desc:'Common Crawl — dataset wielu LLM',       blocked:isBlockedInRobots(rt,'ccbot')}
+    };
+    // Backwards compatibility (używane w innych miejscach UI)
+    R.gptBlocked=R.aiBots['GPTBot'].blocked;
+    R.claudeBlocked=R.aiBots['ClaudeBot'].blocked;
+    R.perplexityBlocked=R.aiBots['PerplexityBot'].blocked;
+    R.liveAiBlocked=Object.values(R.aiBots).filter(b=>b.cat==='live'&&b.blocked).length;
+    R.trainingAiBlocked=Object.values(R.aiBots).filter(b=>b.cat==='training'&&b.blocked).length;
     R.robotsSitemap=rtl.includes('sitemap:');
     robotsContent=rt;
-  }catch{R.hasRobots=false;R.gptBlocked=false;R.claudeBlocked=false;R.perplexityBlocked=false;}
+  }catch{R.hasRobots=false;R.aiBots={};R.gptBlocked=false;R.claudeBlocked=false;R.perplexityBlocked=false;R.liveAiBlocked=0;R.trainingAiBlocked=0;}
 
   // Sitemap detection: robots.txt Sitemap: directive → fallback URLs
   try{
@@ -1151,14 +1281,33 @@ async function runAnalysis(url){
   R.hasSitemap=R.sitemapStatus==='found';
 
   showStep(4); await delay(200);
-  // llms.txt detection with lower threshold
+  // llms.txt — detekcja + walidacja wg spec llmstxt.org
+  // spec: H1 z nazwą (obowiązkowy), blockquote z opisem (rekomendowany), sekcje H2 z listami linków (opcjonalne)
+  R.llmsHasH1=false; R.llmsHasBlockquote=false; R.llmsSectionCount=0; R.llmsLinkCount=0; R.llmsValid=false;
   try{
     const lc = await fetchViaProxy(origin+'/llms.txt', 5);
     if(lc===null) R.llmsStatus='unknown';
-    else if(lc&&lc.length>5&&!lc.toLowerCase().includes('<!doctype')&&!lc.toLowerCase().includes('<html')) R.llmsStatus='found';
-    else R.llmsStatus='missing';
+    else if(lc&&lc.length>5&&!lc.toLowerCase().includes('<!doctype')&&!lc.toLowerCase().includes('<html')){
+      R.llmsStatus='found';
+      // parsuj markdown
+      R.llmsHasH1=/^#\s+\S/m.test(lc);
+      R.llmsHasBlockquote=/^>\s+\S/m.test(lc);
+      R.llmsSectionCount=(lc.match(/^##\s+\S/gm)||[]).length;
+      R.llmsLinkCount=(lc.match(/^\s*-\s*\[[^\]]+\]\([^)]+\)/gm)||[]).length;
+      R.llmsValid=R.llmsHasH1; // H1 to jedyny obowiązkowy element wg spec
+    } else R.llmsStatus='missing';
   }catch{R.llmsStatus='unknown';}
   R.hasLlms=R.llmsStatus==='found';
+
+  // llms-full.txt — opcjonalna rozszerzona wersja (bonus, nie karzemy za brak)
+  R.llmsFullStatus='unknown'; R.hasLlmsFull=false;
+  try{
+    const lfc = await fetchViaProxy(origin+'/llms-full.txt', 5);
+    if(lfc===null) R.llmsFullStatus='unknown';
+    else if(lfc&&lfc.length>50&&!lfc.toLowerCase().includes('<!doctype')&&!lfc.toLowerCase().includes('<html')) R.llmsFullStatus='found';
+    else R.llmsFullStatus='missing';
+  }catch{R.llmsFullStatus='unknown';}
+  R.hasLlmsFull=R.llmsFullStatus==='found';
 
   showStep(5); await delay(500);
   R.mobileScore=null;R.desktopScore=null;
@@ -1175,15 +1324,25 @@ async function runAnalysis(url){
         if(ps.error){ if(attempt<2){await delay(3000);continue;} return null; }
         const score=ps.lighthouseResult?.categories?.performance?.score!=null?Math.round(ps.lighthouseResult.categories.performance.score*100):null;
         const a=ps.lighthouseResult?.audits||{};
-        return {score,lcp:a['largest-contentful-paint']?.displayValue||null,cls:a['cumulative-layout-shift']?.displayValue||null,fcp:a['first-contentful-paint']?.displayValue||null,tbt:a['total-blocking-time']?.displayValue||null};
+        return {
+          score,
+          lcp:a['largest-contentful-paint']?.displayValue||null,
+          cls:a['cumulative-layout-shift']?.displayValue||null,
+          fcp:a['first-contentful-paint']?.displayValue||null,
+          tbt:a['total-blocking-time']?.displayValue||null,
+          inp:a['interaction-to-next-paint']?.displayValue||null,   // nowy CWV (zastąpił FID w marcu 2024)
+          ttfb:a['server-response-time']?.displayValue||null,
+          // field data (CrUX, prawdziwi użytkownicy) — kategorie FAST/AVERAGE/SLOW
+          inpField:ps.loadingExperience?.metrics?.INTERACTION_TO_NEXT_PAINT?.category||null
+        };
       }catch{ if(attempt<2){await delay(3000);continue;} }
     }
     return null;
   }
   const [mobResult, dskResult]=await Promise.all([fetchPS('mobile'), fetchPS('desktop')]);
-  if(mobResult){R.mobileScore=mobResult.score;R.lcp=mobResult.lcp;R.cls=mobResult.cls;R.fcp=mobResult.fcp;R.tbt=mobResult.tbt;}
+  if(mobResult){R.mobileScore=mobResult.score;R.lcp=mobResult.lcp;R.cls=mobResult.cls;R.fcp=mobResult.fcp;R.tbt=mobResult.tbt;R.inp=mobResult.inp;R.ttfb=mobResult.ttfb;R.inpField=mobResult.inpField;}
   showStep(6); await delay(300);
-  if(dskResult){R.desktopScore=dskResult.score;R.dLcp=dskResult.lcp;R.dFcp=dskResult.fcp;R.dCls=dskResult.cls;R.dTbt=dskResult.tbt;}
+  if(dskResult){R.desktopScore=dskResult.score;R.dLcp=dskResult.lcp;R.dFcp=dskResult.fcp;R.dCls=dskResult.cls;R.dTbt=dskResult.tbt;R.dInp=dskResult.inp;R.dTtfb=dskResult.ttfb;}
   R.pageSpeedUrl='https://pagespeed.web.dev/analysis?url='+encodeURIComponent(url);
 
   showStep(7); await delay(200);
@@ -1228,6 +1387,12 @@ async function runAnalysis(url){
   if(R.canonicalConflict) indexScore-=10;
   if(R.hasMixedContent) indexScore-=8;
   if(!R.isHttps) indexScore-=12;
+  // Security headers — każdy brakujący -2 (max -10 gdy 0/6; HSTS już w score poprzez -10 za brak HTTPS, więc tu 5 dodatkowych)
+  if(!R.hasCSP) indexScore-=2;
+  if(!R.hasXFO) indexScore-=2;
+  if(!R.hasXCTO) indexScore-=2;
+  if(!R.hasRefpol) indexScore-=2;
+  if(!R.hasPermpol) indexScore-=2;
 
   // ── Struktura ──
   if(!R.hasSchema) structScore-=(js?5:15);
@@ -1246,14 +1411,30 @@ async function runAnalysis(url){
   // ── AI Ready ──
   if(R.llmsStatus==='missing') aiScore-=15;
   else if(R.llmsStatus==='unknown') aiScore-=5;
-  if(R.gptBlocked) aiScore-=12;
-  if(R.claudeBlocked) aiScore-=8;
-  if(R.perplexityBlocked) aiScore-=8;
+  else if(R.llmsStatus==='found'&&!R.llmsValid) aiScore-=8; // plik jest, ale nie spełnia spec llmstxt.org (brak H1)
+  // AI crawlery: live bots (krytyczne dla obecności w odpowiedziach) -6, training (neutralny wybór) -2
+  for(const bot of Object.values(R.aiBots||{})){
+    if(bot.blocked) aiScore -= bot.cat==='live' ? 6 : 2;
+  }
   if(!R.hasSchema) aiScore-=(js?2:10);
   if(R.robotsStatus==='missing') aiScore-=6;
   else if(R.robotsStatus==='unknown') aiScore-=3;
   if(!R.hasAEOFormats) aiScore-=(js?2:6);
   if(!R.hasAuthor&&!R.hasAuthorSchema) aiScore-=(js?2:6);
+  // sameAs — brak profili zewnętrznych osłabia sygnał E-E-A-T (autorytet)
+  if(R.hasAuthorSchema&&!R.hasPersonSameAs) aiScore-=3;
+  if(R.hasOrgSchema&&!R.hasOrgSameAs) aiScore-=3;
+  // Breadcrumb — pomaga LLM zrozumieć hierarchię; brak = mały minus
+  if(!R.hasBreadcrumb) aiScore-=3;
+  else if(!R.breadcrumbValid) aiScore-=2;
+  // Article schema — jeżeli jest, ma mieć wymagane pola Google (headline/author/datePublished/image)
+  if(R.hasArticleSchema&&!R.articleValid) aiScore-=3;
+  // AEO content — karzemy tylko gdy strona ma sensownie dużo treści (inaczej to JS-heavy / landing)
+  if(R.wordCount>=300&&!js&&!ch){
+    if(R.answerFirst===false) aiScore-=3;           // słowa z H1 nie pojawiają się w pierwszych 150 słowach
+    if(R.totalQuestionHeadings===0&&R.h2Count>=3) aiScore-=2; // dłuższa strona bez Q&A nagłówków
+    if(R.quotableCount===0&&R.wordCount>=600) aiScore-=2;     // dłuższa treść bez cytowalnych bloków
+  }
   if(!R.hasDateModified) aiScore-=5;
   if(!R.hasAboutPage&&!js&&!ch) aiScore-=4;
 
@@ -1512,6 +1693,15 @@ function buildIndex(d){
     chk(!d.hasRedirects||d.redirectCount<2, 'Brak łańcucha przekierowań', d.hasRedirects?d.redirectCount+' przekierowań':null),
     chk(d.isHttps, 'Bezpieczne połączenie (HTTPS)'),
     chk(d.isHttps?d.hasHSTS:null, 'Wymuszenie HTTPS (HSTS)', d.hasHSTS?'aktywne':d.isHttps?'brak nagłówka Strict-Transport-Security':null),
+    chk(d.securityHeadersCount>=5, 'Nagłówki bezpieczeństwa ('+(d.securityHeadersCount||0)+'/6)',
+      [
+        d.hasHSTS?'HSTS':'brak HSTS',
+        d.hasCSP?'CSP':'brak CSP',
+        d.hasXFO?'X-Frame-Options':'brak X-Frame-Options',
+        d.hasXCTO?'X-Content-Type-Options':'brak X-Content-Type-Options',
+        d.hasRefpol?'Referrer-Policy':'brak Referrer-Policy',
+        d.hasPermpol?'Permissions-Policy':'brak Permissions-Policy'
+      ].join(' · ')),
     chk(d.internalLinks>3, 'Linki wewnętrzne', d.internalLinks+' linków wewnętrznych'),
   ]);
   return sec('Indeksowanie','Czy Google widzi Twoje podstrony',worst,f,cl,d.indexScore);
@@ -1545,6 +1735,8 @@ function buildStructure(d){
 }
 
 function buildSpeed(d){
+  // Lighthouse zwraca displayValue jako "150 ms" lub "1.5 s" — ujednolicamy do ms
+  const parseMs=(v)=>{ if(!v) return null; const n=parseFloat(v); if(isNaN(n)) return null; return /\bs\b/i.test(v)?n*1000:n; };
   const f=[];
   // Mobile
   if(d.mobileScore==null){
@@ -1578,6 +1770,8 @@ function buildSpeed(d){
     chk(d.cls?parseFloat(d.cls)<=0.1:null, 'Stabilność layoutu (CLS)', d.cls||'brak danych'),
     chk(d.fcp?parseFloat(d.fcp)<=1.8:null, 'Pierwsze wyświetlenie (FCP)', d.fcp||'brak danych'),
     chk(d.tbt?parseFloat(d.tbt)<=200:null, 'Blokowanie interakcji (TBT)', d.tbt||'brak danych'),
+    chk(d.inp?parseMs(d.inp)<=200:null, 'Responsywność interakcji (INP)', d.inp?(d.inp+(d.inpField?' · użytkownicy: '+d.inpField:'')):'brak danych'),
+    chk(d.ttfb?parseMs(d.ttfb)<=800:null, 'Odpowiedź serwera (TTFB)', d.ttfb||'brak danych'),
     grp('🖥️ Komputer'+(d.desktopScore!=null?' ('+d.desktopScore+'/100)':'')),
     chk(d.desktopScore!=null?d.desktopScore>=80:null, 'Szybkość (PageSpeed desktop)', d.desktopScore!=null?d.desktopScore+'/100':null),
     chk(d.dLcp?parseFloat(d.dLcp)<=2.5:null, 'Czas do głównej treści (LCP)', d.dLcp||'brak danych'),
@@ -1595,20 +1789,56 @@ function buildAI(d){
   const f=[];
   if(d.llmsStatus==='unknown') f.push({s:'amber',t:'Nie udało się sprawdzić widoczności dla AI',src:'html',w:'Nasz serwer nie mógł pobrać pliku llms.txt. Sprawdź ręcznie: '+esc(d.domain)+'/llms.txt',fix:null});
   else if(!d.hasLlms) f.push({s:'amber',t:'Asystenci AI nie mają przewodnika po Twojej stronie',src:'html',w:'Plik llms.txt to nowy standard, który mówi asystentom AI (ChatGPT, Claude, Perplexity) które treści na Twojej stronie są najważniejsze. Coraz więcej narzędzi AI go obsługuje.',fix:'Stwórz plik llms.txt z listą kluczowych podstron. Instrukcja: llmstxt.org, 15 minut roboty.'});
-  else f.push({s:'green',t:'Przewodnik dla AI znaleziony (llms.txt)',src:'html',w:'Asystenci AI mogą odczytać strukturę i najważniejsze treści serwisu.',fix:null});
-  if(d.gptBlocked) f.push({s:'amber',t:'GPTBot (ChatGPT) ma zablokowany dostęp',src:'html',w:'Plik robots.txt blokuje GPTBot (bota ChatGPT). Gdy ktoś pyta ChatGPT o Twoją branżę, Twoja strona nie może być uwzględniona w odpowiedzi.',fix:'Jeśli chcesz być widoczny w AI: usuń blokadę GPTBot. Jeśli nie chcesz żeby AI trenowało na treściach, zostaw.'});
+  else if(!d.llmsValid) f.push({s:'amber',t:'Plik llms.txt istnieje, ale nie spełnia specyfikacji',src:'html',w:'Plik pod /llms.txt został znaleziony, ale brakuje mu nagłówka H1 z nazwą projektu (jedyny obowiązkowy element wg spec llmstxt.org). Boty AI mogą go zignorować lub źle zinterpretować.',fix:'Dodaj na górze pliku linię "# Nazwa Twojego serwisu", a pod nią blockquote z opisem "> Krótki opis czym jest strona". Spec: llmstxt.org'});
+  else f.push({s:'green',t:'Przewodnik dla AI znaleziony i poprawny (llms.txt)',src:'html',w:`Plik zgodny ze spec llmstxt.org${d.llmsHasBlockquote?'':' (warto dodać blockquote z opisem)'}${d.llmsSectionCount>0?' · '+d.llmsSectionCount+' sekcji':''}${d.llmsLinkCount>0?' · '+d.llmsLinkCount+' linków':''}${d.hasLlmsFull?' · llms-full.txt też obecny':''}.`,fix:d.llmsHasBlockquote?null:'Bonus: dodaj blockquote "> opis serwisu" zaraz pod H1 — rekomendowane przez spec.'});
+  if(d.liveAiBlocked>0){
+    const blockedLive=Object.entries(d.aiBots||{}).filter(([n,b])=>b.cat==='live'&&b.blocked).map(([n])=>n).join(', ');
+    f.push({s:'red',t:`Zablokowane boty AI live (${d.liveAiBlocked}): ${blockedLive}`,src:'html',w:'Te boty pobierają treść gdy użytkownik pyta AI. Blokada oznacza że Twoja strona nie zostanie uwzględniona w odpowiedziach ChatGPT / Claude / Perplexity.',fix:`W robots.txt usuń wpisy "User-agent: ${blockedLive.split(', ')[0]}" + "Disallow: /", albo dodaj "Allow: /" dla tych botów.`});
+  }
+  if(d.trainingAiBlocked>0){
+    const blockedTrain=Object.entries(d.aiBots||{}).filter(([n,b])=>b.cat==='training'&&b.blocked).map(([n])=>n).join(', ');
+    f.push({s:'amber',t:`Zablokowane boty AI training (${d.trainingAiBlocked}): ${blockedTrain}`,src:'html',w:'Te boty zbierają dane do trenowania modeli. Blokada jest legitymnym wyborem (nie chcesz żeby AI uczyło się na Twoich treściach), ale wpływa na rozpoznawalność Twojej marki w przyszłych modelach.',fix:'Decyzja etyczna — zostaw blokadę jeżeli świadomie nie chcesz trenowania, odblokuj jeżeli chcesz być częścią przyszłych modeli AI.'});
+  }
   if(!d.hasSchema) f.push({s:'amber',t:'AI nie wie kim jesteś',src:'html',w:'Bez danych strukturalnych asystenci AI muszą zgadywać czym się zajmujesz, gdzie jesteś, co oferujesz.',fix:'Dodaj dane strukturalne (Organization lub LocalBusiness) do strony głównej.'});
   if(!d.hasAEOFormats) f.push({s:'amber',t:'Brak formatów przyjaznych AI (listy, tabele)',src:'html',w:'AI preferuje treści w listach, tabelach i definicjach. Takie formaty łatwiej cytować w odpowiedziach. Strona bez nich ma mniejszą szansę na pojawienie się w odpowiedziach ChatGPT czy Google AIO.',fix:'Dodaj listy punktowane, tabele porównawcze lub sekcje FAQ. To formaty które AI najchętniej cytuje.'});
   if(!d.hasAuthor&&!d.hasAuthorSchema) f.push({s:'amber',t:'Brak widocznego autora treści (E-E-A-T)',src:'html',w:'AI coraz bardziej waży wiarygodność źródła. Strona bez podpisanego autora (imię, bio, link do LinkedIn) jest mniej wiarygodna dla algorytmów AI i Google.',fix:'Dodaj podpis autora z krótką biografią i linkiem do profilu LinkedIn. Rozważ schema Person.'});
+  if(d.hasAuthorSchema&&!d.hasPersonSameAs) f.push({s:'amber',t:'Schema Person bez linków do profili zewnętrznych (sameAs)',src:'html',w:'Autor jest w schema.org, ale bez pola "sameAs" (linki do LinkedIn / Wikipedia / ORCID). To kluczowy sygnał E-E-A-T dla Google i LLM — potwierdza tożsamość i dorobek autora.',fix:'W schema Person dodaj: "sameAs": ["https://linkedin.com/in/...", "https://twitter.com/..."]. Minimum 1 link, najlepiej 2-3.'});
+  if(d.hasOrgSchema&&!d.hasOrgSameAs) f.push({s:'amber',t:'Schema Organization bez linków do profili (sameAs)',src:'html',w:'Twoja firma jest w schema.org, ale bez pola "sameAs" z linkami do profili społecznościowych. To buduje Knowledge Panel w Google i wzmacnia E-E-A-T.',fix:'W schema Organization/LocalBusiness dodaj: "sameAs": ["https://linkedin.com/company/...", "https://facebook.com/...", "https://twitter.com/..."]. Min 2 linki.'});
+  if(d.hasBreadcrumb&&!d.breadcrumbValid) f.push({s:'amber',t:'Breadcrumb schema jest, ale nieprawidłowy',src:'html',w:'Znalazłem BreadcrumbList, ale brakuje wymaganych pól (min 2 ListItem z position + name). Google i LLM mogą go zignorować.',fix:'Uzupełnij każdy ListItem o "position" (liczba 1,2,...) i "name" (tekst). Ostatni element nie wymaga "item" (URL).'});
+  if(d.hasArticleSchema&&!d.articleValid) f.push({s:'amber',t:'Article schema z brakami — '+d.articleErrors.length+' błędów',src:'html',w:'Google Search Central wymaga dla Article/NewsArticle/BlogPosting: headline, author, datePublished, image. Braki: '+d.articleErrors.join(', ')+'. Bez nich AI i Google rich results mogą zignorować schema.',fix:'Uzupełnij brakujące pola w JSON-LD. Dla "author" użyj Person z imieniem + sameAs. Dla "image" podaj URL obrazu reprezentującego artykuł.'});
+  // AEO content alerts (tylko gdy wordCount sensowny)
+  if(d.wordCount>=300&&!d.isJSHeavy){
+    if(d.answerFirst===false) f.push({s:'amber',t:'Odpowiedź na intencję pojawia się za późno',src:'html',w:`W pierwszych 150 słowach tekstu brakuje kluczowych słów z H1 (${d.answerFirstMatched}/${d.answerFirstTotal} słów z H1 wykrytych). AI Overviews i asystenci LLM cytują najchętniej treści które odpowiadają na pytanie zaraz po wstępie.`,fix:'Przenieś główną odpowiedź / tezę artykułu do pierwszego akapitu (pierwsze 150 słów). Dopiero potem rozwijaj szczegóły.'});
+    if(d.totalQuestionHeadings===0&&d.h2Count>=3) f.push({s:'amber',t:'Brak nagłówków w formie pytań',src:'html',w:'Żaden z '+d.h2Count+' nagłówków H2/H3 nie zawiera "?". LLM łatwiej cytują sekcje zbudowane jako Q&A (pytanie w nagłówku → odpowiedź pod nim).',fix:'Przeformułuj 2-3 nagłówki jako pytania ("Jak X?", "Co to jest Y?", "Dlaczego Z?"). To zwiększa szansę na cytowanie w AI Overviews.'});
+    if(d.quotableCount===0&&d.wordCount>=600) f.push({s:'amber',t:'Brak "cytowalnych" akapitów',src:'html',w:'Treść nie zawiera akapitów o długości 100-170 słów z danymi/liczbami. AI preferuje krótkie, samodzielne bloki z faktami — łatwo je cytować.',fix:'Dodaj kilka akapitów ze statystykami, porównaniami lub faktami (100-170 słów, zawierające liczby). Taki blok jest idealny do cytowania przez AI.'});
+  }
   if(!d.hasDateModified) f.push({s:'amber',t:'AI nie wie kiedy treść była aktualizowana',src:'html',w:'Na stronie nie znaleziono daty publikacji ani ostatniej aktualizacji. AI i Google premiują świeże treści. Bez daty Twoja strona wygląda na potencjalnie nieaktualną.',fix:'Dodaj datę aktualizacji: element <time datetime="...">, meta tag article:modified_time, lub dateModified w schema.org.'});
   const worst=f.some(x=>x.s==='red')?'var(--red)':f.some(x=>x.s==='amber')?'var(--amber)':'var(--green)';
   const cl = checklist('Sprawdzone elementy',[
-    chk(d.llmsStatus==='found'?true:d.llmsStatus==='unknown'?null:false, 'Przewodnik dla AI (llms.txt)', d.llmsStatus==='unknown'?'nie udało się sprawdzić':null),
-    chk(d.robotsStatus==='found'?!d.gptBlocked:null, 'ChatGPT może czytać stronę (GPTBot)', d.robotsStatus!=='found'?'nie udało się sprawdzić robots.txt':d.gptBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
-    chk(d.robotsStatus==='found'?!d.claudeBlocked:null, 'Claude może czytać stronę (ClaudeBot)', d.robotsStatus!=='found'?'nie udało się sprawdzić robots.txt':d.claudeBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
-    chk(d.robotsStatus==='found'?!d.perplexityBlocked:null, 'Perplexity może czytać stronę (PerplexityBot)', d.robotsStatus!=='found'?'nie udało się sprawdzić robots.txt':d.perplexityBlocked?'zablokowany w robots.txt':'dostęp otwarty'),
+    chk(d.llmsStatus==='found'?(d.llmsValid?true:null):d.llmsStatus==='unknown'?null:false, 'Przewodnik dla AI (llms.txt)', d.llmsStatus==='unknown'?'nie udało się sprawdzić':d.llmsStatus==='found'?(d.llmsValid?`poprawny${d.llmsHasBlockquote?' · z opisem':''}${d.llmsSectionCount?' · '+d.llmsSectionCount+' sekcji':''}${d.llmsLinkCount?' · '+d.llmsLinkCount+' linków':''}`:'plik znaleziony, ale brak obowiązkowego H1'):null),
+    ...(d.hasLlmsFull?[chk(true, 'Rozszerzony przewodnik (llms-full.txt)', 'bonus — plik opcjonalny, rekomendowany przy dużej dokumentacji')]:[]),
+    ...(d.robotsStatus!=='found'?[chk(null,'Dostęp botów AI','nie udało się sprawdzić robots.txt')]:(()=>{
+      const botsObj=d.aiBots||{};
+      const liveBots=Object.entries(botsObj).filter(([n,b])=>b.cat==='live');
+      const trainBots=Object.entries(botsObj).filter(([n,b])=>b.cat==='training');
+      const liveOpen=liveBots.filter(([n,b])=>!b.blocked).length;
+      const trainOpen=trainBots.filter(([n,b])=>!b.blocked).length;
+      return [
+        chk(liveOpen===liveBots.length, `Live browsing AI (${liveOpen}/${liveBots.length})`, liveBots.map(([n,b])=>`${n}: ${b.blocked?'zablokowany':'otwarty'}`).join(' · ')),
+        chk(trainOpen===trainBots.length?true:null, `AI training (${trainOpen}/${trainBots.length})`, trainBots.map(([n,b])=>`${n}: ${b.blocked?'zablokowany':'otwarty'}`).join(' · ')),
+      ];
+    })()),
     chk(!!d.hasSchema, 'Dane strukturalne dla AI (Schema.org)'),
     chk(d.hasAuthor||d.hasAuthorSchema, 'Autor treści (E-E-A-T)', d.hasAuthorSchema?'schema Person znaleziona':d.hasAuthor?'element autora znaleziony':null),
+    ...(d.hasAuthorSchema?[chk(d.hasPersonSameAs, 'Profile zewnętrzne autora (sameAs)', d.personSameAs>0?d.personSameAs+' linków zewnętrznych':'brak — dodaj LinkedIn/ORCID do schema Person')]:[]),
+    ...(d.hasOrgSchema?[chk(d.hasOrgSameAs, 'Profile zewnętrzne firmy (sameAs)', d.orgSameAs>0?d.orgSameAs+' linków'+(d.orgSameAs<2?' (min 2 rekomendowane)':''):'brak — dodaj profile społecznościowe do schema Organization')]:[]),
+    chk(d.hasBreadcrumb?d.breadcrumbValid:false, 'Hierarchia strony (Breadcrumb schema)', d.hasBreadcrumb?(d.breadcrumbValid?d.breadcrumbCount+' poziomów':'nieprawidłowy — brak position/name w ListItem'):'brak BreadcrumbList — dodaj aby LLM i Google rozumiały strukturę'),
+    ...(d.hasArticleSchema?[chk(d.articleValid, 'Schema artykułu (headline/author/date/image)', d.articleValid?'wszystkie wymagane pola Google':d.articleErrors.length+' braków: '+d.articleErrors.join(', '))]:[]),
+    ...((d.wordCount>=300&&!d.isJSHeavy)?[
+      chk(d.answerFirst, 'Odpowiedź w pierwszych 150 słowach', d.answerFirst===null?'za mało treści':`${d.answerFirstMatched}/${d.answerFirstTotal} słów z H1 w pierwszym akapicie`),
+      chk(d.totalQuestionHeadings>0, 'Nagłówki w formie pytań (Q&A)', d.totalQuestionHeadings>0?d.totalQuestionHeadings+' pytań w H2/H3':'0 pytań — dodaj 2-3 dla AI'),
+      chk(d.quotableCount>0, 'Cytowalne akapity z danymi', d.quotableCount>0?d.quotableCount+' akapitów 100-170 słów z liczbami':'brak — dodaj blok ze statystykami')
+    ]:[]),
     chk(d.hasAEOFormats, 'Formaty przyjazne AI (listy, tabele)', d.aeoTotal>0?d.listCount+' list, '+d.tableCount+' tabel, '+d.dlCount+' definicji':null),
     chk(d.wordCount>0?(d.wordCount>200):null, 'Wystarczająca treść tekstowa dla AI', d.wordCount>0?d.wordCount+' słów':'treść ładowana przez JavaScript'),
     chk(d.hasDateModified, 'Świeżość treści (data aktualizacji)', d.hasDateModified?'znaleziono: '+d.freshnessSource:'brak daty publikacji/aktualizacji'),
@@ -1901,7 +2131,11 @@ function buildReportText(d){
   if(d.cls) t+=ln('CLS (mobile): '+d.cls);
   if(d.fcp) t+=ln('FCP (mobile): '+d.fcp);
   if(d.tbt) t+=ln('TBT (mobile): '+d.tbt);
+  if(d.inp) t+=ln('INP (mobile): '+d.inp+(d.inpField?' · użytkownicy: '+d.inpField:''));
+  if(d.ttfb) t+=ln('TTFB (mobile): '+d.ttfb);
   if(d.dLcp) t+=ln('LCP (desktop): '+d.dLcp);
+  if(d.dInp) t+=ln('INP (desktop): '+d.dInp);
+  if(d.dTtfb) t+=ln('TTFB (desktop): '+d.dTtfb);
   if(d.hasUnminified) t+=ln('Niezminifikowane pliki: '+d.unminifiedJS+' JS, '+d.unminifiedCSS+' CSS');
   if(d.hasBlockingScripts) t+=ln('Skrypty blokujące rendering: '+d.blockingScripts);
   if(d.totalImages>3&&!d.hasLazyLoading) t+=ln('Obrazki bez lazy loading: '+d.imgsNoLazy+' z '+d.totalImages);
@@ -1913,6 +2147,7 @@ function buildReportText(d){
   if(d.hasNofollow) t+=ln('UWAGA: Strona ma nofollow');
   t+=ln('HTTPS: '+(d.isHttps?'tak':'nie'));
   t+=ln('HSTS: '+(d.hasHSTS?'tak':'nie'));
+  t+=ln('Nagłówki bezpieczeństwa: '+(d.securityHeadersCount||0)+'/6 (CSP:'+(d.hasCSP?'T':'N')+' · XFO:'+(d.hasXFO?'T':'N')+' · XCTO:'+(d.hasXCTO?'T':'N')+' · Refpol:'+(d.hasRefpol?'T':'N')+' · Permpol:'+(d.hasPermpol?'T':'N')+')');
   t+=ln('Przekierowania: '+(d.hasRedirects?d.redirectCount:'brak'));
   t+=ln('Linki wewnętrzne: '+d.internalLinks+', zewnętrzne: '+d.externalLinks);
 
@@ -1924,11 +2159,25 @@ function buildReportText(d){
   if(d.hasEmptyLinks) t+=ln('Puste linki (bez tekstu): '+d.emptyLinks);
 
   t+=sec('AI Ready (GEO)',d.aiScore);
-  t+=ln('llms.txt: '+d.llmsStatus);
-  t+=ln('GPTBot: '+(d.gptBlocked?'ZABLOKOWANY':'dostęp otwarty'));
-  t+=ln('ClaudeBot: '+(d.claudeBlocked?'ZABLOKOWANY':'dostęp otwarty'));
-  t+=ln('PerplexityBot: '+(d.perplexityBlocked?'ZABLOKOWANY':'dostęp otwarty'));
+  t+=ln('llms.txt: '+d.llmsStatus+(d.llmsStatus==='found'?(d.llmsValid?' (poprawny wg spec)':' (BŁĄD: brak obowiązkowego H1)')+(d.llmsHasBlockquote?' · blockquote: tak':'')+(d.llmsSectionCount?' · sekcje: '+d.llmsSectionCount:'')+(d.llmsLinkCount?' · linki: '+d.llmsLinkCount:''):''));
+  if(d.hasLlmsFull) t+=ln('llms-full.txt: found (bonus)');
+  const _aiBotsEnt=Object.entries(d.aiBots||{});
+  if(_aiBotsEnt.length){
+    t+=ln('Boty AI live browsing:');
+    _aiBotsEnt.filter(([n,b])=>b.cat==='live').forEach(([n,b])=>{ t+=ln('  '+n+' ('+b.vendor+'): '+(b.blocked?'ZABLOKOWANY':'dostęp otwarty')); });
+    t+=ln('Boty AI training:');
+    _aiBotsEnt.filter(([n,b])=>b.cat==='training').forEach(([n,b])=>{ t+=ln('  '+n+' ('+b.vendor+'): '+(b.blocked?'ZABLOKOWANY':'dostęp otwarty')); });
+  }
   t+=ln('Autor (E-E-A-T): '+(d.hasAuthor||d.hasAuthorSchema?'tak':'brak'));
+  if(d.hasAuthorSchema) t+=ln('Profile autora (sameAs): '+(d.hasPersonSameAs?d.personSameAs+' linków':'BRAK'));
+  if(d.hasOrgSchema) t+=ln('Profile firmy (sameAs): '+(d.hasOrgSameAs?d.orgSameAs+' linków':d.orgSameAs+' linków (min 2 rekomendowane)'));
+  t+=ln('Breadcrumb schema: '+(d.hasBreadcrumb?(d.breadcrumbValid?'tak ('+d.breadcrumbCount+' poziomów)':'nieprawidłowy'):'brak'));
+  if(d.hasArticleSchema) t+=ln('Article schema: '+(d.articleValid?'poprawny':'braki — '+d.articleErrors.join(', ')));
+  if(d.wordCount>=300&&!d.isJSHeavy){
+    t+=ln('Answer-first: '+(d.answerFirst===null?'brak danych':d.answerFirst?'tak ('+d.answerFirstMatched+'/'+d.answerFirstTotal+' słów z H1)':'nie ('+d.answerFirstMatched+'/'+d.answerFirstTotal+')'));
+    t+=ln('Pytania w H2/H3: '+d.totalQuestionHeadings);
+    t+=ln('Cytowalne akapity: '+d.quotableCount);
+  }
   t+=ln('Data aktualizacji: '+(d.hasDateModified?d.freshnessSource:'brak'));
   t+=ln('Formaty AEO: '+(d.hasAEOFormats?d.listCount+' list, '+d.tableCount+' tabel, '+d.dlCount+' definicji':'brak'));
 

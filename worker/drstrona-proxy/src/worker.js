@@ -120,6 +120,12 @@ export default {
         let body = await resp.text();
         const xRobots = resp.headers.get('X-Robots-Tag') || '';
         const hsts = resp.headers.get('Strict-Transport-Security') || '';
+        // Security headers — eksponujemy do audytu w drstrona
+        const csp = resp.headers.get('Content-Security-Policy') || '';
+        const xfo = resp.headers.get('X-Frame-Options') || '';
+        const xcto = resp.headers.get('X-Content-Type-Options') || '';
+        const refpol = resp.headers.get('Referrer-Policy') || '';
+        const permpol = resp.headers.get('Permissions-Policy') || '';
 
         let renderedVia = 'fetch';
         let challengeType = detectChallenge(body, resp.status);
@@ -150,9 +156,14 @@ export default {
           'X-Proxy-Final-Url': currentUrl,
           'X-Robots-Tag': xRobots,
           'X-Proxy-HSTS': hsts,
+          'X-Proxy-CSP': csp,
+          'X-Proxy-XFO': xfo,
+          'X-Proxy-XCTO': xcto,
+          'X-Proxy-Refpol': refpol,
+          'X-Proxy-Permpol': permpol,
           'X-Proxy-Rendered': renderedVia,
           'X-Proxy-Challenge': challengeType || 'none',
-          'Access-Control-Expose-Headers': 'X-Proxy-Chain, X-Proxy-Final-Url, X-Robots-Tag, X-Proxy-Status, X-Proxy-HSTS, X-Proxy-Rendered, X-Proxy-Challenge',
+          'Access-Control-Expose-Headers': 'X-Proxy-Chain, X-Proxy-Final-Url, X-Robots-Tag, X-Proxy-Status, X-Proxy-HSTS, X-Proxy-CSP, X-Proxy-XFO, X-Proxy-XCTO, X-Proxy-Refpol, X-Proxy-Permpol, X-Proxy-Rendered, X-Proxy-Challenge',
         };
 
         return new Response(body, {
