@@ -1934,9 +1934,17 @@ function handleLogin(){
 
 let googleCredential = null;
 
+// Poprawne dekodowanie JWT payload: base64url + UTF-8 (atob zwraca binary string, który psuje polskie znaki)
+function decodeJwtPayload(token){
+  const b64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+  const bin = atob(b64);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+}
+
 function onGoogleSignIn(response){
   googleCredential = response.credential;
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const payload = decodeJwtPayload(response.credential);
   googleUser = {
     email: payload.email,
     name: payload.given_name || payload.name,
@@ -2012,6 +2020,17 @@ function checkSession(){
   if(saved){
     googleUser = JSON.parse(saved);
     googleCredential = localStorage.getItem('drstrona_credential');
+    // Napraw imiona zepsute starym dekoderem (atob bez UTF-8) — bez wymuszania re-loginu
+    if(googleCredential){
+      try {
+        const p = decodeJwtPayload(googleCredential);
+        const fresh = p.given_name || p.name;
+        if(fresh && fresh !== googleUser.name){
+          googleUser.name = fresh;
+          localStorage.setItem('drstrona_user', JSON.stringify(googleUser));
+        }
+      } catch(e){}
+    }
     updateUIForUser();
     if(localStorage.getItem('drstrona_unlocked')==='true'){
       unlockContent();
