@@ -2139,9 +2139,8 @@ function updateUIForUser(){
   }
 }
 
-// Feedback strip: pojawia się PO UKOŃCZONYM SKANIE, po 30s + 20% scrolla, tylko zalogowani, cooldown 7 dni
+// Feedback strip: pojawia się PO UKOŃCZONYM SKANIE, gdy 30s LUB 20% scrolla (cokolwiek pierwsze), tylko zalogowani, cooldown 7 dni
 let feedbackStripInit = false;
-let feedbackStripReady = false;
 let feedbackStripShown = false;
 let scanCompleted = false;
 
@@ -2150,26 +2149,27 @@ function initFeedbackStrip(){
   const dismissed = localStorage.getItem('drstrona_feedback_dismissed_at');
   if(dismissed && (Date.now() - parseInt(dismissed)) < 7 * 24 * 60 * 60 * 1000) return;
   feedbackStripInit = true;
-  setTimeout(()=>{
-    feedbackStripReady = true;
-    checkShowFeedbackStrip();
-  }, 30000);
+  setTimeout(showFeedbackStrip, 30000);
   window.addEventListener('scroll', checkShowFeedbackStrip, {passive:true});
+  checkShowFeedbackStrip();
 }
 
 function checkShowFeedbackStrip(){
-  if(feedbackStripShown || !feedbackStripReady) return;
+  if(feedbackStripShown) return;
   const docH = document.documentElement.scrollHeight;
   const scrollPct = (window.scrollY + window.innerHeight) / docH;
-  if(scrollPct >= 0.2){
-    feedbackStripShown = true;
-    const el = document.getElementById('feedbackStrip');
-    if(el){
-      el.style.display = 'flex';
-      document.body.classList.add('feedback-strip-visible');
-      requestAnimationFrame(()=>{ el.classList.add('visible'); });
-      gtag('event','feedback_strip_shown');
-    }
+  if(scrollPct >= 0.2) showFeedbackStrip();
+}
+
+function showFeedbackStrip(){
+  if(feedbackStripShown) return;
+  feedbackStripShown = true;
+  const el = document.getElementById('feedbackStrip');
+  if(el){
+    el.style.display = 'flex';
+    document.body.classList.add('feedback-strip-visible');
+    requestAnimationFrame(()=>{ el.classList.add('visible'); });
+    gtag('event','feedback_strip_shown');
   }
 }
 
