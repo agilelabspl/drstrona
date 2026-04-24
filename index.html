@@ -170,6 +170,11 @@ nav{
   display:flex;flex-direction:column;align-items:flex-start;gap:18px;
 }
 .early-access-cta-wrap{margin-top:4px}
+.rodo-note{
+  font-size:12px;color:var(--ink3);
+  line-height:1.5;font-family:var(--ff-sans);
+  max-width:280px;margin-top:-4px;
+}
 .early-access-features{
   list-style:none;padding:0;margin:6px 0 4px;
   display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;
@@ -641,6 +646,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
         <li>UX i wiarygodność</li>
       </ul>
       <div id="bannerLoginBtn" class="early-access-cta-wrap"></div>
+      <p class="rodo-note">Logując się przez Google zgadzasz się na otrzymywanie informacji o rozwoju Dr Strony. Możesz wypisać się jednym kliknięciem.</p>
     </div>
   </section>
 </div>
@@ -1681,7 +1687,7 @@ function renderReport(d,url){
           <p>dr Strona przygotował dla Ciebie 7 badań i recept dla <strong>${esc(d.domain)}</strong>.<br>Zaloguj się żeby zobaczyć co i jak poprawić.</p>
           <div id="gateForm">
             <div class="gate-btn-wrap" id="gateLoginBtn"></div>
-            <div class="gate-hint">Darmowe. Używamy tylko Twojego imienia i emaila.</div>
+            <div class="gate-hint">Logując się przez Google zgadzasz się na otrzymywanie informacji o rozwoju Dr Strony. Możesz wypisać się jednym kliknięciem.</div>
           </div>
           <div class="gate-success" id="gateSuccess">
             <p>Zalogowano. Oto pełne wyniki badania.</p>

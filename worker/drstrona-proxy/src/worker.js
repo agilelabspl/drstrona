@@ -317,6 +317,27 @@ async function handleUserSave(request, env, corsHeaders) {
 
     await env.USERS.put(key, JSON.stringify(user));
 
+    // Dopisz nowego usera do MailerLite (grupa "dr Strona")
+    if (!existing && env.MAILERLITE_TOKEN) {
+      try {
+        await fetch('https://connect.mailerlite.com/api/subscribers', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.MAILERLITE_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            email: verified.email,
+            fields: { name: verified.name || '' },
+            groups: ['185610051914827426'],
+          }),
+        });
+      } catch (e) {
+        console.log('MailerLite subscribe failed:', e.message);
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
