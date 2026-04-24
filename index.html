@@ -452,11 +452,17 @@ h1 em{font-style:italic;color:var(--accent)}
 
 /* ── STEPS BANNER ── */
 .steps-banner{
-  display:flex;align-items:stretch;justify-content:center;gap:0;
+  display:flex;flex-direction:column;
   max-width:680px;margin:28px auto 0;
   background:var(--card);border:1.5px solid var(--border2);border-radius:14px;
   overflow:hidden;box-shadow:0 2px 12px rgba(26,23,20,0.06);
 }
+.steps-title{
+  text-align:center;font-family:var(--ff-serif);font-size:20px;font-weight:400;
+  color:var(--ink);padding:14px 16px 12px;margin:0;
+  border-bottom:1.5px dashed var(--border2);letter-spacing:-0.01em;
+}
+.steps-row{display:flex;align-items:stretch;justify-content:center}
 .step-item{
   flex:1;padding:20px 16px;text-align:center;position:relative;
 }
@@ -474,7 +480,7 @@ h1 em{font-style:italic;color:var(--accent)}
 .step-item:last-child .step-text{color:var(--accent);font-weight:700}
 .step-arrow{display:none}
 @media(max-width:540px){
-  .steps-banner{flex-direction:column}
+  .steps-row{flex-direction:column}
   .step-item:not(:last-child){border-right:none;border-bottom:1px solid var(--border)}
   .step-arrow{display:none}
 }
@@ -650,18 +656,20 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
     <button class="btn-scan" id="scanBtn" onclick="startScan()">Zbadaj stronę →</button>
   </div>
   <div class="steps-banner">
-    <h2 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0">Jak zbadać swoją stronę</h2>
-    <div class="step-item">
-      <div class="step-num">1</div>
-      <div class="step-text">Wklej adres strony</div>
-    </div>
-    <div class="step-item">
-      <div class="step-num">2</div>
-      <div class="step-text">Otrzymaj diagnozę i receptę</div>
-    </div>
-    <div class="step-item">
-      <div class="step-num">3</div>
-      <div class="step-text">Gotowy prompt dla Twojego AI</div>
+    <h2 class="steps-title">Jak to działa?</h2>
+    <div class="steps-row">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-text">Wklej adres strony</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-text">Otrzymaj diagnozę i receptę</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-text">Gotowy prompt z poprawkami dla Twojego AI</div>
+      </div>
     </div>
   </div>
 
