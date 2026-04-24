@@ -497,18 +497,6 @@ h1 em{font-style:italic;color:var(--accent)}
 .copy-ai-btn.copied{background:var(--green);opacity:1}
 .copy-ai-btn.copied::after{animation:none;display:none}
 
-/* ── FEEDBACK BUTTON ── */
-.feedback-btn{
-  display:none;position:fixed;bottom:76px;right:24px;z-index:99;
-  background:var(--accent);color:white;
-  font-size:16px;font-weight:600;font-family:var(--ff-sans);
-  border:none;border-radius:12px;padding:14px 28px;
-  cursor:pointer;text-decoration:none;
-  box-shadow:0 4px 20px rgba(91,79,232,0.35);
-  transition:background .2s,transform .1s,box-shadow .2s;
-}
-.feedback-btn:hover{background:var(--accent2);transform:scale(1.05);box-shadow:0 6px 28px rgba(91,79,232,0.45)}
-
 /* ── SUPPORT BUTTON ── */
 .support-btn{
   display:none;position:fixed;bottom:24px;right:24px;z-index:99;
@@ -554,7 +542,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
       Dr Strona
     </div>
     <div class="nav-actions">
-      <a href="#early-access" class="nav-link">Wczesny dostęp</a>
+      <a href="#early-access" class="nav-link" id="navActionLink">Wczesny dostęp</a>
       <div class="nav-right">
         <div id="navLoginBtn"></div>
         <div class="nav-user" id="navUser" style="display:none">
@@ -2088,13 +2076,19 @@ function updateUIForUser(){
   const loginBtn = document.getElementById('navLoginBtn');
   const userEl = document.getElementById('navUser');
   const nameEl = document.getElementById('navUserName');
-  const fb = document.getElementById('feedbackBar');
   const sb = document.getElementById('supportBar');
+  const navLink = document.getElementById('navActionLink');
   if(loginBtn) loginBtn.style.display='none';
   if(userEl) userEl.style.display='flex';
   if(nameEl) nameEl.textContent = googleUser.name;
-  if(fb) fb.style.display='block';
   if(sb) sb.style.display='block';
+  if(navLink){
+    navLink.textContent = 'Napisz feedback';
+    navLink.href = 'https://forms.gle/k7rtbYoYJ9z8LDTx6';
+    navLink.target = '_blank';
+    navLink.rel = 'noopener';
+    navLink.onclick = ()=>{ gtag('event','feedback_click',{source:'nav'}); };
+  }
 }
 
 function handleLogout(){
@@ -2105,8 +2099,16 @@ function handleLogout(){
   localStorage.removeItem('drstrona_unlocked');
   const loginBtn = document.getElementById('navLoginBtn');
   const userEl = document.getElementById('navUser');
+  const navLink = document.getElementById('navActionLink');
   if(loginBtn) loginBtn.style.display='inline-flex';
   if(userEl) userEl.style.display='none';
+  if(navLink){
+    navLink.textContent = 'Wczesny dostęp';
+    navLink.href = '#early-access';
+    navLink.removeAttribute('target');
+    navLink.removeAttribute('rel');
+    navLink.onclick = null;
+  }
   location.reload();
 }
 
@@ -2383,7 +2385,6 @@ ${'─'.repeat(50)}
   });
 }
 </script>
-<a class="feedback-btn" id="feedbackBar" href="https://forms.gle/k7rtbYoYJ9z8LDTx6" target="_blank" rel="noopener">Feedback do MVP</a>
 <a class="support-btn" id="supportBar" href="https://buy.stripe.com/dRmeV536N0Qv0yV12gfAc0b" target="_blank" rel="noopener" onclick="gtag('event','support_click')"><svg style="display:inline-block;vertical-align:-2px;margin-right:6px" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Koperta dla dr Strony</a>
 
 </body>
