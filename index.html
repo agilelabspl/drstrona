@@ -2084,10 +2084,12 @@ function updateUIForUser(){
   const nameEl = document.getElementById('navUserName');
   const sb = document.getElementById('supportBar');
   const navLink = document.getElementById('navActionLink');
+  const earlyAccess = document.getElementById('early-access');
   if(loginBtn) loginBtn.style.display='none';
   if(userEl) userEl.style.display='flex';
   if(nameEl) nameEl.textContent = googleUser.name;
   if(sb) sb.style.display='block';
+  if(earlyAccess) earlyAccess.style.display='none';
   if(navLink){
     navLink.textContent = 'Napisz feedback';
     navLink.href = 'https://forms.gle/k7rtbYoYJ9z8LDTx6';
