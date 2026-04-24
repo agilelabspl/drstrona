@@ -83,7 +83,7 @@
 
 body{background:var(--bg);color:var(--ink);font-family:var(--ff-sans);min-height:100vh;line-height:1.6;overflow-x:hidden;display:flex;flex-direction:column}
 main{flex:1}
-html{overflow-x:hidden}
+html{overflow-x:hidden;scroll-behavior:smooth}
 
 /* ── NAV ── */
 nav{
@@ -111,6 +111,105 @@ nav{
 .nav-user{display:flex;align-items:center;gap:12px;font-size:13px;font-family:var(--ff-sans);color:var(--ink2)}
 .nav-logout{background:none;border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;color:var(--ink3);transition:border-color .2s}
 .nav-logout:hover{border-color:var(--accent);color:var(--accent)}
+.nav-actions{display:flex;align-items:center;gap:16px}
+.nav-link{
+  font-family:var(--ff-sans);
+  font-size:14px;font-weight:500;
+  color:var(--ink2);text-decoration:none;
+  padding:8px 14px;border-radius:8px;
+  transition:color .2s, background .2s;
+  white-space:nowrap;
+}
+.nav-link:hover{color:var(--accent);background:rgba(91,79,232,0.06)}
+
+/* ── EARLY ACCESS BANNER ── */
+#early-access{scroll-margin-top:80px}
+.early-access-banner{
+  max-width:920px;margin:56px auto 0;
+  background:rgba(91,79,232,0.025);
+  border:1.5px dashed var(--border2);
+  border-radius:20px;
+  padding:0;overflow:hidden;
+  display:grid;grid-template-columns:1fr 1fr;gap:0;
+  align-items:stretch;text-align:left;
+}
+.early-access-content{padding:40px 40px 40px 44px}
+.early-access-content h3{
+  font-family:var(--ff-serif);
+  font-size:30px;font-weight:400;
+  color:var(--ink);letter-spacing:-0.01em;
+  line-height:1.2;margin-bottom:20px;
+}
+.early-access-content p{
+  font-size:15px;color:var(--ink2);
+  line-height:1.7;margin-bottom:14px;
+}
+.early-access-content p:last-child{margin-bottom:0}
+
+.scan-counter{
+  display:inline-flex;align-items:center;gap:10px;
+  margin:-32px auto 32px;
+  padding:8px 18px;
+  background:rgba(91,79,232,0.08);
+  border:1px solid rgba(91,79,232,0.25);
+  border-radius:20px;
+  font-family:var(--ff-mono);font-size:12px;
+  color:var(--ink2);
+  letter-spacing:0.05em;text-transform:uppercase;
+  font-weight:500;
+}
+.scan-counter strong{
+  color:var(--accent);font-weight:700;
+  font-size:15px;font-family:var(--ff-sans);
+  letter-spacing:0;text-transform:none;
+}
+.early-access-side{
+  padding:40px 44px 40px 40px;
+  border-left:1.5px dashed var(--border2);
+  background:linear-gradient(135deg, rgba(91,79,232,0.07), rgba(91,79,232,0.015));
+  display:flex;flex-direction:column;align-items:flex-start;gap:18px;
+}
+.early-access-cta-wrap{margin-top:4px}
+.early-access-features{
+  list-style:none;padding:0;margin:6px 0 4px;
+  display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;
+}
+.early-access-features li{
+  display:flex;align-items:center;gap:10px;
+  font-size:15px;color:var(--ink);font-family:var(--ff-sans);
+  font-weight:500;line-height:1.45;
+}
+.early-access-features li::before{
+  content:"";flex-shrink:0;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--accent);
+}
+.early-access-features-label{
+  font-size:11px;font-family:var(--ff-mono);
+  color:var(--ink3);text-transform:uppercase;
+  letter-spacing:0.08em;margin-top:4px;
+}
+
+@media (max-width:720px){
+  .early-access-banner{
+    grid-template-columns:1fr;text-align:left;
+    margin-top:40px;
+  }
+  .early-access-content{padding:28px 24px 20px}
+  .early-access-side{
+    padding:24px 24px 28px;gap:16px;
+    border-left:none;border-top:1.5px dashed var(--border2);
+    background:linear-gradient(180deg, rgba(91,79,232,0.06), rgba(91,79,232,0.015));
+  }
+  .early-access-features{grid-template-columns:1fr}
+  .nav-link{padding:6px 10px;font-size:13px}
+  .nav-actions{gap:10px}
+}
+@media (max-width:460px){
+  .nav-link{display:none}
+  .early-access-content{padding:24px 20px 16px}
+  .early-access-side{padding:20px 20px 24px}
+}
 
 /* ── HERO ── */
 .hero{max-width:1080px;margin:0 auto;padding:80px 48px 60px;text-align:center}
@@ -181,8 +280,6 @@ h1 em{font-style:italic;color:var(--accent)}
 .btn-scan:active{transform:scale(0.97)}
 .btn-scan:disabled{opacity:0.45;cursor:not-allowed}
 
-.checks-row{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:12px}
-.check-pill{font-size:12px;color:var(--ink3);background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 12px}
 
 /* ── LOADING ── */
 #loading{display:none;max-width:600px;margin:40px auto 0;text-align:left}
@@ -456,12 +553,15 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
       <div class="nav-pulse"></div>
       Dr Strona
     </div>
-    <div class="nav-right">
-      <div id="navLoginBtn"></div>
-    <div class="nav-user" id="navUser" style="display:none">
-      <span id="navUserName"></span>
-      <button class="nav-logout" onclick="handleLogout()">Wyloguj</button>
-    </div>
+    <div class="nav-actions">
+      <a href="#early-access" class="nav-link">Wczesny dostęp</a>
+      <div class="nav-right">
+        <div id="navLoginBtn"></div>
+        <div class="nav-user" id="navUser" style="display:none">
+          <span id="navUserName"></span>
+          <button class="nav-logout" onclick="handleLogout()">Wyloguj</button>
+        </div>
+      </div>
     </div>
   </div>
 </nav>
@@ -476,6 +576,9 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
   <h1>Czy Twoja strona<br><em>naprawdę żyje?</em></h1>
 
   <p class="hero-sub">Zbadaj 6 obszarów (+1 bonus) swojej strony w 59 sekund.<br>Dowiedz się co blokuje Twój ruch, widoczność i konwersje.</p>
+
+  <!-- Licznik: aktualizuj ręcznie z GA4 scan_complete (property 530190314) -->
+  <div class="scan-counter">Ilość wykonanych badań: <strong>625</strong></div>
 
   <div class="ekg-wrap">
     <h2 class="ekg-label" style="font-size:inherit;font-weight:inherit;margin:0">
@@ -515,16 +618,6 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
     <input type="text" id="urlInput" placeholder="np. twoja-firma.pl" />
     <button class="btn-scan" id="scanBtn" onclick="startScan()">Zbadaj stronę →</button>
   </div>
-  <div class="checks-row">
-    <span class="check-pill">SEO</span>
-    <span class="check-pill">Szybkość strony</span>
-    <span class="check-pill">GEO (AI SEO)</span>
-    <span class="check-pill">Indeksowanie</span>
-    <span class="check-pill">Struktura techniczna</span>
-    <span class="check-pill">RODO i prywatność</span>
-    <span class="check-pill">UX i wiarygodność</span>
-  </div>
-
   <div class="steps-banner">
     <h2 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0">Jak zbadać swoją stronę</h2>
     <div class="step-item">
@@ -540,6 +633,28 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
       <div class="step-text">Gotowy prompt dla Twojego AI</div>
     </div>
   </div>
+
+  <section id="early-access" class="early-access-banner" aria-labelledby="ea-title">
+    <div class="early-access-content">
+      <h3 id="ea-title">Dołącz dzisiaj za 0 zł</h3>
+      <p>Gabinet dr Strona jest we wczesnej wersji MVP. Testuję pierwsze funkcje z prawdziwymi użytkownikami, czyli Tobą.</p>
+      <p>Korzystasz bez opłat i bez zobowiązań w zamian za Twój feedback.</p>
+      <p>Zaloguj się swoim kontem Google i uzyskaj dostęp do pełnych wyników badania swojej strony. Dam Ci znać, gdy pojawią się nowe funkcje.</p>
+    </div>
+    <div class="early-access-side">
+      <div class="early-access-features-label">Dr Strona zbada 7 obszarów Twojej strony:</div>
+      <ul class="early-access-features">
+        <li>SEO</li>
+        <li>Szybkość strony</li>
+        <li>GEO (AI SEO)</li>
+        <li>Indeksowanie</li>
+        <li>Struktura techniczna</li>
+        <li>RODO i prywatność</li>
+        <li>UX i wiarygodność</li>
+      </ul>
+      <div id="bannerLoginBtn" class="early-access-cta-wrap"></div>
+    </div>
+  </section>
 </div>
 
 <div class="error-box" id="error-box"></div>
@@ -1919,6 +2034,17 @@ function renderGoogleButtons(){
       size: 'large',
       text: 'signin_with',
       width: 280,
+      locale: 'pl',
+    });
+  }
+  const bannerBtn = document.getElementById('bannerLoginBtn');
+  if(bannerBtn && !googleUser){
+    google.accounts.id.renderButton(bannerBtn, {
+      type: 'standard',
+      theme: 'filled_blue',
+      size: 'large',
+      text: 'signin_with',
+      width: 260,
       locale: 'pl',
     });
   }
