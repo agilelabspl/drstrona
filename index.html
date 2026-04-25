@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dr Strona | zbadaj zdrowie swojej strony</title>
-<meta name="description" content="Zbadaj 6 obszarów (+1 bonus) swojej strony w 59 sekund. SEO, szybkość, AI Ready (GEO), indeksowanie, struktura, RODO. Dowiedz się co poprawić.">
+<meta name="description" content="Zbadaj 7 obszarów (+1 bonus) swojej strony w 59 sekund. SEO, szybkość, AI Ready (GEO), indeksowanie, struktura, RODO, cytowalność w AI. Dowiedz się co poprawić.">
 <link rel="icon" href="favicon.svg">
 <link rel="canonical" href="https://www.drstrona.pl/">
 <meta property="og:title" content="Dr Strona | zbadaj zdrowie swojej strony">
@@ -450,6 +450,30 @@ h1 em{font-style:italic;color:var(--accent)}
 .gate-locked{display:flex;align-items:center;gap:8px;justify-content:center;font-size:14px;color:var(--ink2);margin-top:20px;margin-bottom:-4px;font-weight:500}
 .gate-locked::before{content:'';width:12px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239C9489' stroke-width='2'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0110 0v4'/%3E%3C/svg%3E") no-repeat center/contain}
 
+/* ── CYTOWALNOŚĆ AI ── */
+.cite-loading{display:flex;align-items:center;gap:12px;padding:18px 0;color:var(--ink2);font-size:14px}
+.cite-spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+.cite-result{padding:6px 0 12px}
+.cite-status{display:flex;align-items:center;gap:12px;font-family:var(--ff-serif);font-size:22px;font-weight:400;line-height:1.3;padding:14px 16px;border-radius:6px;margin-bottom:14px;letter-spacing:-0.01em}
+.cite-status-yes{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.cite-status-no{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.cite-status-icon{font-family:var(--ff-mono);font-size:24px;font-weight:700;line-height:1;flex-shrink:0}
+.cite-meta{font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:14px;padding:10px 14px;background:var(--bg);border-radius:4px;border-left:3px solid var(--border2)}
+.cite-meta strong{color:var(--ink);font-weight:600}
+.cite-meta em{color:var(--ink);font-style:italic}
+.cite-meta > div + div{margin-top:2px}
+.cite-sources-title{font-size:12px;color:var(--ink3);font-family:var(--ff-mono);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px}
+.cite-source{padding:8px 12px;border:1px solid var(--border);border-radius:4px;margin-bottom:6px;font-size:13px;line-height:1.5;background:var(--card)}
+.cite-source a{color:var(--ink);text-decoration:none;word-break:break-word}
+.cite-source a:hover{color:var(--accent)}
+.cite-source-match{background:var(--green-bg);border-color:var(--green-bd);position:relative}
+.cite-source-match::before{content:'★ Twoja domena';position:absolute;top:-8px;right:8px;font-size:10px;color:var(--green);background:var(--card);padding:1px 6px;border:1px solid var(--green-bd);border-radius:8px;font-family:var(--ff-mono);letter-spacing:0.03em}
+.cite-source-empty{padding:10px;color:var(--ink3);font-size:13px;font-style:italic}
+.cite-error{display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:6px;font-size:14px;line-height:1.5;color:var(--ink)}
+.cite-error-limit{background:var(--bg);border-color:var(--border2)}
+.cite-error-icon{font-size:22px;flex-shrink:0;line-height:1}
+.cite-error strong{font-weight:600}
+
 /* ── STEPS BANNER ── */
 .steps-banner{
   display:flex;flex-direction:column;
@@ -681,7 +705,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
       <p>Zaloguj się swoim kontem Google i uzyskaj dostęp do pełnych wyników badania swojej strony. Dam Ci znać, gdy pojawią się nowe funkcje.</p>
     </div>
     <div class="early-access-side">
-      <div class="early-access-features-label">Dr Strona zbada 7 obszarów Twojej strony:</div>
+      <div class="early-access-features-label">Dr Strona zbada 7 obszarów (+1 bonus) Twojej strony:</div>
       <ul class="early-access-features">
         <li>SEO</li>
         <li>Szybkość strony</li>
@@ -689,7 +713,8 @@ footer{padding:40px 24px;border-top:1px solid var(--border);font-size:12px;color
         <li>Indeksowanie</li>
         <li>Struktura techniczna</li>
         <li>RODO i prywatność</li>
-        <li>UX i wiarygodność</li>
+        <li>Cytowalność AI</li>
+        <li>UX i wiarygodność <span style="color:var(--accent);font-weight:600">BONUS</span></li>
       </ul>
       <div id="bannerLoginBtn" class="early-access-cta-wrap"></div>
       <p class="rodo-note">Logując się przez Google zgadzasz się na otrzymywanie informacji o rozwoju Dr Strony. Możesz wypisać się jednym kliknięciem.</p>
@@ -1670,7 +1695,7 @@ function renderReport(d,url){
       <div class="rec-meta-label">Pacjent:</div>
       <div class="rec-meta-value url">${esc(d.domain)}</div>
       <div class="rec-meta-label">Badanie:</div>
-      <div class="rec-meta-value">Diagnoza zdrowia strony <small>(6 obszarów + 1 bonus)</small></div>
+      <div class="rec-meta-value">Diagnoza zdrowia strony <small>(7 obszarów + 1 bonus)</small></div>
       <div class="rec-meta-label">Data:</div>
       <div class="rec-meta-value">${esc(d.ts)}</div>
       <div class="rec-meta-label">Lekarz:</div>
@@ -1724,6 +1749,7 @@ function renderReport(d,url){
         ${buildIndex(d)}
         ${buildStructure(d)}
         ${buildAI(d)}
+        ${buildCite(d)}
         ${buildPrivacy(d)}
         ${buildUX(d)}
         ${buildGood(d)}
@@ -1732,7 +1758,7 @@ function renderReport(d,url){
         <div class="gate-card">
           <div class="gate-icon">🔒</div>
           <h3>Twoje recepty są gotowe</h3>
-          <p>dr Strona przygotował dla Ciebie 7 badań i recept dla <strong>${esc(d.domain)}</strong>.<br>Zaloguj się żeby zobaczyć co i jak poprawić.</p>
+          <p>dr Strona przygotował dla Ciebie 8 badań i recept dla <strong>${esc(d.domain)}</strong>.<br>Zaloguj się żeby zobaczyć co i jak poprawić.</p>
           <div id="gateForm">
             <div class="gate-btn-wrap" id="gateLoginBtn"></div>
             <div class="gate-hint">Logując się przez Google zgadzasz się na otrzymywanie informacji o rozwoju Dr Strony. Możesz wypisać się jednym kliknięciem.</div>
@@ -1758,6 +1784,11 @@ function renderReport(d,url){
   // render Google button in gate popup
   renderGoogleButtons();
 
+  // zachowaj wynik audytu globalnie — potrzebne do triggerCiteCheck po loginie
+  window._lastScan = d;
+  _citeCheckDone = false;
+  _citeCheckInFlight = false;
+
   // unlock if logged in
   if(googleUser && localStorage.getItem('drstrona_unlocked')==='true'){
     unlockContent();
@@ -1765,6 +1796,7 @@ function renderReport(d,url){
   // save scan to KV if logged in
   if(googleUser){
     saveUserToKV();
+    triggerCiteCheck(d);
   }
 }
 
@@ -1781,7 +1813,7 @@ function checklist(title, items){
 function sec(title,sub,dotColor,findings,checklistHtml,score){
   _recCounter++;
   const sc=dotColor.includes('green')?'sg':dotColor.includes('amber')?'sa':'sr';
-  const isBonus=_recCounter===7;
+  const isBonus=_recCounter===8;
   return `<div class="rec-poz">
     <div class="rec-poz-head">
       <div class="rec-poz-nr">Recepta ${_recCounter} z 7${isBonus?' <span style="color:var(--accent);font-weight:600">BONUS</span>':''}</div>
@@ -2001,6 +2033,133 @@ function buildAI(d){
     chk(d.hasDateModified, 'Świeżość treści (data aktualizacji)', d.hasDateModified?'znaleziono: '+d.freshnessSource:'brak daty publikacji/aktualizacji'),
   ]);
   return sec('AI Ready (GEO)','Widoczność w ChatGPT, Perplexity, Gemini',worst,f,cl,d.aiScore);
+}
+
+// ── Cytowalność AI: placeholder, dane przychodzą async z /api/cite-check ──
+function buildCite(d){
+  _recCounter++;
+  return `<div class="rec-poz">
+    <div class="rec-poz-head">
+      <div class="rec-poz-nr">Recepta ${_recCounter} z 7</div>
+    </div>
+    <div class="rec-poz-title">Cytowalność AI</div>
+    <div class="rec-poz-sub">Czy AI o Tobie mówi · test live przez Gemini + Google Search</div>
+    <div class="rec-findings" id="citeContent">
+      <div class="cite-loading">
+        <div class="cite-spinner"></div>
+        <span>Sprawdzam, czy AI o Tobie mówi…</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function escAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function renderCiteResult(data){
+  const cited = data.cited;
+  const sources = (data.sources||[]).slice(0,5);
+  const matchedSources = sources.filter(s => {
+    try {
+      const h = new URL(s.uri).hostname.replace(/^www\./,'').toLowerCase();
+      return h === data.domain || h.endsWith('.' + data.domain);
+    } catch { return false; }
+  });
+  const sourcesHtml = sources.length ? sources.map(s => {
+    let isMatch = false;
+    try {
+      const h = new URL(s.uri).hostname.replace(/^www\./,'').toLowerCase();
+      isMatch = h === data.domain || h.endsWith('.' + data.domain);
+    } catch {}
+    const title = s.title || s.uri;
+    return `<div class="cite-source${isMatch?' cite-source-match':''}"><a href="${escAttr(s.uri)}" target="_blank" rel="noopener">${esc(title)}</a></div>`;
+  }).join('') : '<div class="cite-source-empty">Gemini nie zwrócił żadnych źródeł.</div>';
+
+  const fixHtml = !cited ? `
+    <div class="rec-f-fix" style="margin-top:14px">
+      <div class="rec-f-fix-label">Recepta:</div>
+      Twoja domena nie pojawia się w źródłach Gemini dla tego zapytania. Popraw najpierw sekcję "AI Ready (GEO)" wyżej (llms.txt, schema.org, dostęp botów AI). Potem buduj autorytet treścią z liczbami, faktami, cytatami ekspertów.
+    </div>` : '';
+
+  const cacheNote = data.fromCache ? ' <small style="color:var(--ink3)">(wynik z cache, do 14 dni)</small>' : '';
+
+  return `<div class="cite-result">
+    <div class="cite-status ${cited?'cite-status-yes':'cite-status-no'}">
+      <span class="cite-status-icon">${cited?'✓':'✗'}</span>
+      <span class="cite-status-text">${cited?'AI cytuje Twoją domenę':'AI jeszcze nie cytuje Twojej domeny'}</span>
+    </div>
+    <div class="cite-meta">
+      <div><strong>Zapytanie testowe:</strong> <em>${esc(data.query)}</em></div>
+      <div><strong>Model:</strong> ${esc(data.model||'gemini')}${cacheNote}</div>
+      <div><strong>Źródeł w odpowiedzi:</strong> ${data.sourcesCount||0}${matchedSources.length?` (${matchedSources.length} z Twojej domeny)`:''}</div>
+    </div>
+    <div class="cite-sources">
+      <div class="cite-sources-title">Źródła które AI wykorzystało:</div>
+      ${sourcesHtml}
+    </div>
+    ${fixHtml}
+  </div>`;
+}
+
+function renderCiteError(data){
+  const isLimit = data && (data.error === 'Daily limit exceeded' || data.status === 429);
+  if (isLimit) {
+    return `<div class="cite-error cite-error-limit">
+      <div class="cite-error-icon">⏳</div>
+      <div>
+        <strong>Dzienny limit testów wyczerpany.</strong><br>
+        Wróć jutro po pełny test cytowalności. Test korzysta z darmowego tieru Google Gemini API i ma dzienny limit.
+      </div>
+    </div>`;
+  }
+  return `<div class="cite-error">
+    <div class="cite-error-icon">⚠️</div>
+    <div>
+      <strong>Nie udało się sprawdzić cytowalności.</strong><br>
+      ${esc(data && data.error ? data.error : 'Spróbuj odświeżyć stronę lub wróć później.')}
+    </div>
+  </div>`;
+}
+
+let _citeCheckInFlight = false;
+let _citeCheckDone = false;
+
+function triggerCiteCheck(d){
+  if (_citeCheckInFlight || _citeCheckDone) return;
+  if (!d || !d.domain) return;
+  const cred = googleCredential || localStorage.getItem('drstrona_credential');
+  if (!cred) return;
+  const target = document.getElementById('citeContent');
+  if (!target) return;
+
+  _citeCheckInFlight = true;
+  const query = (d.title && d.title.trim()) ? d.title.trim() : `firmy lub strony powiązane z ${d.domain}`;
+
+  fetch('https://drstrona-proxy.agilelabs-pl.workers.dev/api/cite-check', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ credential: cred, domain: d.domain, query })
+  })
+    .then(async r => {
+      const data = await r.json().catch(()=>({error:'Invalid JSON response'}));
+      if (!r.ok) data._httpStatus = r.status;
+      return { ok: r.ok, data };
+    })
+    .then(({ok, data}) => {
+      const el = document.getElementById('citeContent');
+      if (!el) return;
+      _citeCheckDone = true;
+      if (ok) {
+        el.innerHTML = renderCiteResult(data);
+        try { gtag('event','cite_check',{cited: data.cited, from_cache: data.fromCache}); } catch(e){}
+      } else {
+        el.innerHTML = renderCiteError({ ...data, status: data._httpStatus });
+      }
+    })
+    .catch(e => {
+      const el = document.getElementById('citeContent');
+      if (el) el.innerHTML = renderCiteError({error: e.message});
+    })
+    .finally(() => { _citeCheckInFlight = false; });
 }
 
 function buildPrivacy(d){
@@ -2230,6 +2389,8 @@ function unlockContent(){
   if(success) success.style.display='block';
   const copyBtn = document.getElementById('copyAiBtn');
   if(copyBtn){ copyBtn.style.display='block'; copyBtn.style.animation='none'; requestAnimationFrame(()=>{ copyBtn.style.animation=''; }); }
+  // po loginie odpal test cytowalności AI dla aktualnego skanu
+  if(window._lastScan) triggerCiteCheck(window._lastScan);
 }
 
 function saveUserToKV(){

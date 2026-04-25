@@ -59,6 +59,9 @@ export default {
       }
       return handleUsersList(env, corsHeaders);
     }
+    if (url.pathname === '/api/cite-check' && request.method === 'POST') {
+      return handleCiteCheck(request, env, corsHeaders);
+    }
 
     const target = url.searchParams.get('url');
 
@@ -359,4 +362,152 @@ async function handleUsersList(env, corsHeaders) {
   return new Response(JSON.stringify(users), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+// ── CYTOWALNOŚĆ AI: Gemini grounded search ──
+// Sprawdza, czy domena pojawia się w źródłach odpowiedzi Gemini z Google Search grounding.
+const CITE_DAILY_LIMIT = 200;       // safety cap dla free tier
+const CITE_CACHE_TTL = 1209600;     // 14 dni
+const CITE_COUNTER_TTL = 86400;     // 24h auto-reset
+
+function normalizeDomain(input) {
+  return String(input)
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/$/, '')
+    .split('/')[0]
+    .toLowerCase()
+    .trim();
+}
+
+async function handleCiteCheck(request, env, corsHeaders) {
+  try {
+    const { credential, domain, query } = await request.json();
+    if (!credential || !domain) {
+      return new Response(JSON.stringify({ error: 'Missing credential or domain' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const verified = await verifyGoogleToken(credential);
+    if (!verified) {
+      return new Response(JSON.stringify({ error: 'Invalid Google token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!env.GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ error: 'Gemini API key not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const normDomain = normalizeDomain(domain);
+    if (!normDomain) {
+      return new Response(JSON.stringify({ error: 'Invalid domain' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Cache hit?
+    const cacheKey = `cite:${normDomain}`;
+    const cached = await env.USERS.get(cacheKey, 'json');
+    if (cached) {
+      return new Response(JSON.stringify({ ...cached, fromCache: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Daily limit
+    const today = new Date().toISOString().slice(0, 10);
+    const counterKey = `count:${today}`;
+    const count = parseInt((await env.USERS.get(counterKey)) || '0', 10);
+    if (count >= CITE_DAILY_LIMIT) {
+      return new Response(JSON.stringify({
+        error: 'Daily limit exceeded',
+        retryAfter: 'tomorrow',
+        limit: CITE_DAILY_LIMIT,
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Build prompt (auto-generuje pytanie testowe)
+    const userQuery = query && query.trim() ? query.trim() : `firmy lub strony powiązane z ${normDomain}`;
+    const prompt = `Wymień 5 najbardziej rozpoznawalnych polskich firm lub stron internetowych na temat: "${userQuery}". Podaj nazwy firm i ich domeny. Skup się na podmiotach aktywnych dziś. Odpowiedz po polsku.`;
+
+    // Call Gemini 2.0 Flash with Google Search grounding
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+    const geminiResp = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ google_search: {} }],
+      }),
+    });
+
+    if (!geminiResp.ok) {
+      const errText = await geminiResp.text();
+      return new Response(JSON.stringify({
+        error: 'Gemini API error',
+        status: geminiResp.status,
+        details: errText.slice(0, 500),
+      }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const geminiData = await geminiResp.json();
+
+    // groundingMetadata.groundingChunks[].web.{uri,title}
+    const candidate = geminiData?.candidates?.[0];
+    const groundingChunks = candidate?.groundingMetadata?.groundingChunks || [];
+    const sources = groundingChunks
+      .filter(c => c?.web?.uri)
+      .map(c => ({ uri: c.web.uri, title: c.web.title || '' }));
+
+    // Czy domena klienta jest w źródłach?
+    const cited = sources.some(s => {
+      try {
+        const srcHost = new URL(s.uri).hostname.replace(/^www\./, '').toLowerCase();
+        return srcHost === normDomain || srcHost.endsWith('.' + normDomain);
+      } catch {
+        return false;
+      }
+    });
+
+    const responseText = candidate?.content?.parts?.[0]?.text || '';
+    const webSearchQueries = candidate?.groundingMetadata?.webSearchQueries || [];
+
+    const result = {
+      cited,
+      sources: sources.slice(0, 10),
+      sourcesCount: sources.length,
+      query: userQuery,
+      webSearchQueries,
+      responseText: responseText.slice(0, 1500),
+      domain: normDomain,
+      model: 'gemini-2.0-flash',
+      timestamp: new Date().toISOString(),
+    };
+
+    await env.USERS.put(cacheKey, JSON.stringify(result), { expirationTtl: CITE_CACHE_TTL });
+    await env.USERS.put(counterKey, String(count + 1), { expirationTtl: CITE_COUNTER_TTL });
+
+    return new Response(JSON.stringify({ ...result, fromCache: false }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 }
